@@ -1,10 +1,11 @@
 import { Route, Switch } from 'wouter'
 
 import './App.css'
-import Terms from './Terms'
 import Home from './Home'
+import Terms from './Terms'
 
 const App = () => {
+
   return (
     <Switch>
       <Route path="/" component={Home} />

@@ -38,12 +38,12 @@
 }
 
 .read-the-docs {
-  color: #888;
+  color: #FFFFFF;
 }
 
 .home-container {
   background-color: #f3e5f5; /* lila muy claro */
-  color: white;
+  color: #888;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -51,6 +51,7 @@
   justify-content: center;
   text-align: center;
   padding: 2rem;
+  width: 100%;
 }
 
 .logo {
@@ -60,7 +61,7 @@
 }
 
 .terms-link a {
-  color: white;
+  color: #888;
   font-weight: bold;
   text-decoration: underline;
   transition: opacity 0.3s ease;
