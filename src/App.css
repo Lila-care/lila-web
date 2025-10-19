@@ -40,3 +40,32 @@
 .read-the-docs {
   color: #888;
 }
+
+.home-container {
+  background-color: #f3e5f5; /* lila muy claro */
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.logo {
+  width: 150px;
+  height: auto;
+  margin-bottom: 1rem;
+}
+
+.terms-link a {
+  color: white;
+  font-weight: bold;
+  text-decoration: underline;
+  transition: opacity 0.3s ease;
+}
+
+.terms-link a:hover {
+  opacity: 0.8;
+}
