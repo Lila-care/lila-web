@@ -41,6 +41,21 @@
   color: #FFFFFF;
 }
 
+.terms-container {
+  color: #888;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: justify;
+  line-height: 1.6; 
+}
+
+.terms-container * {
+  color: inherit;
+}
+
+
+
 .home-container {
   background-color: #f3e5f5; /* lila muy claro */
   color: #888;
