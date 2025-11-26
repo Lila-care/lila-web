@@ -10,7 +10,7 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #f3e5f5;
+  background-color: #ffffff;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -20,11 +20,7 @@
 
 a {
   font-weight: 500;
-  color: #646cff;
   text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
 }
 
 body {
@@ -86,6 +82,7 @@ button:focus-visible {
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: #7e3565;
   --color-secondary: #F8EAFE;
+  --color-accent: #d8d9b1;
   --color-text: #828282;
   --color-border: var(--border);
   --color-input: var(--input);
