@@ -2,7 +2,7 @@ import selloLila from '/sello_vinotinto.svg'
 
 function Login() {
   return (
-    <div className="w-full min-h-screen flex items-center justify-center bg-[#F8EAFE]">
+    <div className="w-full min-h-screen flex items-center justify-center bg-secondary">
       <div className="bg-white shadow-lg rounded-2xl p-10 w-full max-w-md text-center space-y-6">
         
         {/* Logo */}
