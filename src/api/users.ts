@@ -22,7 +22,6 @@ export async function fetchUsers(page: number, limit: number): Promise<Paginated
   // 🟣 Convertir el formato del backend → formato UserReport del frontend
   const mappedData: UserReport[] = json.data.map((item: any) => ({
     id: item.user_id,
-    name: item.user_name,
     email: item.user_email,
     cycleReports: item.cycle_reports,
     energyReports: item.energy_reports,
@@ -37,4 +36,17 @@ export async function fetchUsers(page: number, limit: number): Promise<Paginated
     limit: json.limit,
     totalPages: json.totalPages,
   }
+}
+
+export async function fetchUserDetails(userId: string) {
+  const res = await fetch(
+    `${import.meta.env.VITE_API_URL}/admin/dashboard/user/profile/${userId}`
+  )
+
+  if (!res.ok) {
+    throw new Error("Error fetching user details")
+  }
+
+  const json = await res.json()
+  return json
 }

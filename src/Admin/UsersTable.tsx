@@ -16,7 +16,6 @@ import {
 
 export type UserReport = {
   id: string
-  name: string
   email: string
   cycleReports: number
   energyReports: number
@@ -24,11 +23,25 @@ export type UserReport = {
   total: number
 }
 
+export type UserProfileData = {
+  profile: {
+    id: string;
+    userId: string;
+    firstReport: string;
+    periodDays: number;
+    cycleSize: number;
+  };
+  device: {
+    deviceToken: string;
+  };
+};
+
+
 export const columns: ColumnDef<UserReport>[] = [
   {
-    accessorKey: "name",
+    accessorKey: "id",
     header: "User",
-    cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+    cell: ({ row }) => <span className="font-medium">{row.original.id}</span>,
   },
   {
     accessorKey: "email",
@@ -52,7 +65,7 @@ export const columns: ColumnDef<UserReport>[] = [
   },
 ]
 
-export function UsersTable({ data }: { data: UserReport[] }) {
+export function UsersTable({ data, onSelectUser }: { data: UserReport[]; onSelectUser?: (id: string) => void }) {
   const table = useReactTable({
     data,
     columns,
@@ -68,7 +81,7 @@ export function UsersTable({ data }: { data: UserReport[] }) {
               {headerGroup.headers.map(header => (
                 <TableHead
                   key={header.id}
-                  className="text-gray-700 font-semibold"
+                  className="text-lila-text font-semibold"
                 >
                   {flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
@@ -82,7 +95,11 @@ export function UsersTable({ data }: { data: UserReport[] }) {
             table.getRowModel().rows.map(row => (
               <TableRow key={row.id} className="hover:bg-gray-50">
                 {row.getVisibleCells().map(cell => (
-                  <TableCell key={cell.id} className="text-gray-600">
+                  <TableCell 
+                  key={cell.id} 
+                  className="text-lila-text"
+                  onClick={() => onSelectUser && onSelectUser(row.original.id)}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -92,7 +109,7 @@ export function UsersTable({ data }: { data: UserReport[] }) {
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="text-center py-8 text-gray-500"
+                className="text-center py-8 text-lila-text"
               >
                 No users found.
               </TableCell>
