@@ -1,5 +1,26 @@
 import selloLila from '/sello_vinotinto.svg'
 
+
+const handleGoogleLogin = () => {
+  const domain = import.meta.env.VITE_AUTH_DOMAIN;
+  const clientId = "51fiord6co5ge8go197fc111h9";
+  const redirectUri = import.meta.env.VITE_REDIRECT_URI;
+
+  const params = new URLSearchParams({
+    identity_provider: "Google",
+    redirect_uri: redirectUri,
+    response_type: "code", // usa "code" en minúsculas
+    client_id: clientId,
+    scope: "openid",
+  });
+
+  const url = `${domain}/oauth2/authorize?${params.toString()}`;
+
+  console.log("Cognito auth URL:", url);
+  window.location.assign(url);
+};
+
+
 function Login() {
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-secondary">
@@ -20,7 +41,8 @@ function Login() {
         </p>
 
         <button
-          className="flex items-center justify-center gap-3 w-full border border-gray-300 rounded-lg py-3 hover:bg-gray-50 transition"
+          onClick={handleGoogleLogin}
+          className="flex bg-primary items-center justify-center gap-3 w-full border border-gray-300 rounded-lg py-3 hover:bg-gray-50 transition"
         >
           <img 
             src="https://www.svgrepo.com/show/475656/google-color.svg"
