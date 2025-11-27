@@ -80,7 +80,7 @@ function UserDetails({ userId }: { userId: string }) {
             onChange={(e) => setNotificationBody(e.target.value)}
           />
           <button
-            className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 disabled:bg-gray-400"
+            className="bg-primary text-white rounded px-4 py-2 : disabled:bg-gray-400"
             onClick={handleSendNotification}
             disabled={sending}
           >

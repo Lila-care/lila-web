@@ -81,7 +81,7 @@ export function UsersTable({ data, onSelectUser }: { data: UserReport[]; onSelec
               {headerGroup.headers.map(header => (
                 <TableHead
                   key={header.id}
-                  className="text-lila-text font-semibold"
+                  className="text-gray-700! font-semibold"
                 >
                   {flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
@@ -93,11 +93,10 @@ export function UsersTable({ data, onSelectUser }: { data: UserReport[]; onSelec
         <TableBody>
           {table.getRowModel().rows.length > 0 ? (
             table.getRowModel().rows.map(row => (
-              <TableRow key={row.id} className="hover:bg-gray-50">
+              <TableRow key={row.id} className="hover:bg-gray-50 text-text">
                 {row.getVisibleCells().map(cell => (
                   <TableCell 
-                  key={cell.id} 
-                  className="text-lila-text"
+                  key={cell.id}
                   onClick={() => onSelectUser && onSelectUser(row.original.id)}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -109,7 +108,7 @@ export function UsersTable({ data, onSelectUser }: { data: UserReport[]; onSelec
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="text-center py-8 text-lila-text"
+                className="text-center py-8 text-gray-800!"
               >
                 No users found.
               </TableCell>
