@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Google OAuth credentials
+client_secret*.json
+
+# TypeScript build info
+tsconfig.*.tsbuildinfo
+
+# Duplicate lock files
+package-lock.json
+
+# Serena MCP
+.serena/
