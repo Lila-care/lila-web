@@ -1,18 +1,19 @@
-import { useEffect, useState } from 'react'
-import { Menu, X, LogOut } from 'lucide-react'
-import { useAuth } from '@/auth/AuthContext'
-import { getConversations } from '@/api/lila'
-import type { ConversationSummary } from '@/api/lila'
-import { useLilaChat } from './useLilaChat'
-import ChatWindow from './ChatWindow'
-import ConversationList from './ConversationList'
-import LoginGateModal from './LoginGateModal'
-import UpgradeGateModal from './UpgradeGateModal'
+import { useEffect, useState } from "react";
+import { Menu, X } from "lucide-react";
+import { useAuth } from "@/auth/AuthContext";
+import { getConversations } from "@/api/lila";
+import type { ConversationSummary } from "@/api/lila";
+import { useLilaChat } from "./useLilaChat";
+import ChatWindow from "./ChatWindow";
+import ConversationList from "./ConversationList";
+import AccountBanner from "./AccountBanner";
+import LoginGateModal from "./LoginGateModal";
+import UpgradeGateModal from "./UpgradeGateModal";
 
 function ChatPage() {
-  const { token, userId, logout } = useAuth()
-  const [conversations, setConversations] = useState<ConversationSummary[]>([])
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { token, email, name, picture, logout } = useAuth();
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const {
     messages,
@@ -26,69 +27,85 @@ function ChatPage() {
     freeQuestionLimit,
     upgradePromptLimit,
     hasActiveTemplate,
+    onboardingPending,
     sendMessage,
     loadConversation,
     startNewConversation,
-  } = useLilaChat()
+  } = useLilaChat();
 
   // Load conversations list on mount (only for authenticated users)
   useEffect(() => {
-    if (!token) return
+    if (!token) return;
     getConversations(token)
       .then((res) => setConversations(res.conversations))
-      .catch(console.error)
-  }, [token])
+      .catch(console.error);
+  }, [token]);
 
   // Refresh conversation list when a new conversationId appears
   useEffect(() => {
-    if (!token || !conversationId) return
+    if (!token || !conversationId) return;
     getConversations(token)
       .then((res) => setConversations(res.conversations))
-      .catch(console.error)
-  }, [token, conversationId])
+      .catch(console.error);
+  }, [token, conversationId]);
 
   const handleSelectConversation = (id: string) => {
-    loadConversation(id)
-    setSidebarOpen(false)
-  }
+    loadConversation(id);
+    setSidebarOpen(false);
+  };
 
   const handleNewConversation = () => {
-    startNewConversation()
-    setSidebarOpen(false)
-  }
+    if (!token && messages.length > 0) {
+      const confirmed = window.confirm(
+        "Esta conversación no se guardó porque no iniciaste sesión. Si cambias de tema ahora, la perderás. ¿Quieres continuar?",
+      );
+      if (!confirmed) return;
+    }
+    startNewConversation();
+    setSidebarOpen(false);
+  };
 
-  const isEmptyState = hasActiveTemplate && messages.length === 0 && !isLoading
+  const isEmptyState = hasActiveTemplate && messages.length === 0 && !isLoading;
 
   return (
-    <div className={`flex h-screen overflow-hidden ${isEmptyState ? 'bg-[#FCF9F3]' : 'bg-secondary'}`}>
-      {/* Sidebar — only shown for authenticated users when not in empty state */}
-      {token && !isEmptyState && (
-        <aside
-          className={`
-            fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300
-            md:relative md:translate-x-0 md:flex md:flex-col
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          `}
-        >
-          {/* Sidebar header with logo */}
-          <div className="flex items-center gap-2 px-4 py-4 bg-white border-b border-gray-100">
-            <img src="/sello_vinotinto.svg" alt="Lila" className="w-8 h-8" />
-            <span className="font-semibold text-primary text-lg">Lila</span>
-          </div>
+    <div
+      className={`flex h-screen overflow-hidden ${isEmptyState ? "bg-[#FCF9F3]" : "bg-secondary"}`}
+    >
+      {/* Sidebar — always shown for both guests and authenticated users, including empty state */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300
+          md:relative md:translate-x-0 md:flex md:flex-col
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
+      >
+        {/* Sidebar header with logo */}
+        <div className="flex items-center gap-2 px-4 py-4 bg-white border-b border-gray-100">
+          <img src="/sello_vinotinto.svg" alt="Lila" className="w-8 h-8" />
+          <span className="font-semibold text-primary text-lg">Lila</span>
+        </div>
 
-          <div className="flex-1 overflow-hidden">
-            <ConversationList
-              conversations={conversations}
-              currentId={conversationId}
-              onSelect={handleSelectConversation}
-              onNew={handleNewConversation}
-            />
-          </div>
-        </aside>
-      )}
+        <div className="flex-1 overflow-hidden">
+          <ConversationList
+            conversations={conversations}
+            currentId={conversationId}
+            onSelect={handleSelectConversation}
+            onNew={handleNewConversation}
+            isAuthenticated={!!token}
+          />
+        </div>
+
+        <AccountBanner
+          email={email}
+          name={name}
+          picture={picture}
+          isAuthenticated={!!token}
+          onLogout={logout}
+        />
+      </aside>
 
       {/* Mobile sidebar overlay backdrop */}
-      {sidebarOpen && !isEmptyState && (
+      {sidebarOpen && (
         <div
           className="fixed inset-0 z-20 bg-black/30 md:hidden"
           onClick={() => setSidebarOpen(false)}
@@ -97,34 +114,21 @@ function ChatPage() {
 
       {/* Main content */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Header — hidden during empty state (EmptyState has its own wordmark) */}
+        {/* Header — hidden during empty state (EmptyState has its own wordmark + mobile menu) */}
         {!isEmptyState && (
           <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 shrink-0">
-            {token && (
-              <button
-                onClick={() => setSidebarOpen((v) => !v)}
-                className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
-              >
-                {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
-            )}
+            <button
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
+            >
+              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-sm font-semibold text-gray-800 truncate">Chat con Lila</h1>
-              {userId && (
-                <p className="text-xs text-gray-400 truncate">{userId}</p>
-              )}
+              <h1 className="text-sm font-semibold text-gray-800 truncate">
+                Chat con Lila
+              </h1>
             </div>
-
-            {token && (
-              <button
-                onClick={logout}
-                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition px-3 py-1.5 rounded-lg hover:bg-secondary"
-              >
-                <LogOut size={15} />
-                <span className="hidden sm:inline">Salir</span>
-              </button>
-            )}
           </header>
         )}
 
@@ -136,7 +140,19 @@ function ChatPage() {
         )}
 
         {/* Chat area */}
-        <div className={`flex-1 overflow-hidden ${isEmptyState ? 'bg-[#FCF9F3]' : 'bg-white'}`}>
+        <div
+          className={`relative flex-1 overflow-hidden ${isEmptyState ? "bg-[#FCF9F3]" : "bg-white"}`}
+        >
+          {/* Floating mobile menu button — empty state has its own header without one */}
+          {isEmptyState && (
+            <button
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="md:hidden absolute top-4 right-4 z-20 p-2 rounded-lg bg-white/80 hover:bg-white shadow-sm transition"
+            >
+              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          )}
+
           {!hasActiveTemplate && messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-500 text-sm text-center px-4">
@@ -148,6 +164,7 @@ function ChatPage() {
               messages={messages}
               isLoading={isLoading}
               onSend={sendMessage}
+              onboardingPending={onboardingPending}
             />
           )}
         </div>
@@ -169,7 +186,7 @@ function ChatPage() {
         />
       )}
     </div>
-  )
+  );
 }
 
-export default ChatPage
+export default ChatPage;

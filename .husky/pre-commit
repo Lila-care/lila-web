@@ -1,0 +1,5 @@
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner || exit 1
+else
+  echo "gitleaks no instalado (brew install gitleaks) — commit continúa sin escaneo." >&2
+fi
