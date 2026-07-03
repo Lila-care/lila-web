@@ -1,79 +1,108 @@
-import { useEffect, useState } from 'react'
-import { useLocation } from 'wouter'
-import { TOKEN_KEY } from '@/auth/AuthContext'
-import { migrateGuest } from '@/api/lila'
-import { readExistingGuestId, clearGuestId } from '@/lib/guest'
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/auth/AuthContext";
+import { migrateGuest } from "@/api/lila";
+import { readExistingGuestId, clearGuestId } from "@/lib/guest";
 
 function AuthCallback() {
-  const [error, setError] = useState<string | null>(null)
-  const [, navigate] = useLocation()
+  const [error, setError] = useState<string | null>(null);
+  const [, navigate] = useLocation();
+  const { login } = useAuth();
+  // Cognito's authorization code is single-use: exchanging it twice makes the second
+  // request fail with `invalid_grant`. This effect can otherwise run more than once per
+  // code — React.StrictMode double-invokes effects in dev, and `login`/`navigate` are new
+  // function references on every AuthProvider/router render, which are effect deps below.
+  // Guard so the exchange (+ guest migration) fires exactly once per mount, regardless of
+  // how many times the effect re-runs.
+  const hasRunRef = useRef(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const code = params.get('code')
+    if (hasRunRef.current) return;
+    hasRunRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
 
     if (!code) {
-      setError('No se recibió el código de autorización.')
-      return
+      setError("No se recibió el código de autorización.");
+      return;
     }
 
-    const domain = import.meta.env.VITE_AUTH_DOMAIN
-    const clientId = import.meta.env.VITE_CLIENT_ID
-    const redirectUri = import.meta.env.VITE_REDIRECT_URI
+    const domain = import.meta.env.VITE_AUTH_DOMAIN;
+    const clientId = import.meta.env.VITE_CLIENT_ID;
+    const redirectUri = import.meta.env.VITE_REDIRECT_URI;
 
-    console.group('[AuthCallback] token exchange — env vars')
-    console.log('VITE_AUTH_DOMAIN :', domain)
-    console.log('VITE_CLIENT_ID   :', clientId)
-    console.log('VITE_REDIRECT_URI:', redirectUri)
-    console.log('code             :', code)
-    console.groupEnd()
+    console.group("[AuthCallback] token exchange — env vars");
+    console.log("VITE_AUTH_DOMAIN :", domain);
+    console.log("VITE_CLIENT_ID   :", clientId);
+    console.log("VITE_REDIRECT_URI:", redirectUri);
+    console.log("code             :", code);
+    console.groupEnd();
 
     if (!domain || !clientId || !redirectUri) {
       const missing = [
-        !domain && 'VITE_AUTH_DOMAIN',
-        !clientId && 'VITE_CLIENT_ID',
-        !redirectUri && 'VITE_REDIRECT_URI',
-      ].filter(Boolean).join(', ')
-      console.error('[AuthCallback] Variables de entorno faltantes:', missing)
-      setError(`Variables de entorno faltantes: ${missing}`)
-      return
+        !domain && "VITE_AUTH_DOMAIN",
+        !clientId && "VITE_CLIENT_ID",
+        !redirectUri && "VITE_REDIRECT_URI",
+      ]
+        .filter(Boolean)
+        .join(", ");
+      console.error("[AuthCallback] Variables de entorno faltantes:", missing);
+      setError(`Variables de entorno faltantes: ${missing}`);
+      return;
     }
 
     const body = new URLSearchParams({
-      grant_type: 'authorization_code',
+      grant_type: "authorization_code",
       client_id: clientId,
       code,
       redirect_uri: redirectUri,
-    })
+    });
 
-    const tokenUrl = `${domain}/oauth2/token`
-    console.log('[AuthCallback] POST', tokenUrl, Object.fromEntries(body))
+    const tokenUrl = `${domain}/oauth2/token`;
+    console.log("[AuthCallback] POST", tokenUrl, Object.fromEntries(body));
 
     fetch(tokenUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString(),
     })
       .then((res) => {
-        if (!res.ok) throw new Error(`Error ${res.status} al intercambiar el código`)
-        return res.json()
+        if (!res.ok)
+          throw new Error(`Error ${res.status} al intercambiar el código`);
+        return res.json();
       })
-      .then((data: { id_token: string; access_token: string; refresh_token: string }) => {
-        localStorage.setItem(TOKEN_KEY, data.id_token)
-        localStorage.removeItem('lila_anon_count')
-        const existingGuestId = readExistingGuestId()
-        if (existingGuestId) {
-          migrateGuest(data.id_token, existingGuestId)
-            .catch(console.error)
-            .finally(() => clearGuestId())
-        }
-        navigate('/chat')
-      })
+      .then(
+        (data: {
+          id_token: string;
+          access_token: string;
+          refresh_token: string;
+        }) => {
+          login(data.id_token);
+          localStorage.removeItem("lila_anon_count");
+          const existingGuestId = readExistingGuestId();
+          if (existingGuestId) {
+            migrateGuest(data.id_token, existingGuestId)
+              .catch((err: Error) => {
+                // A guest cookie can exist client-side (`crypto.randomUUID()`) without a
+                // matching server-side guest record — that only gets created on the first
+                // guest chat/agent request. Logging in without ever chatting as a guest is
+                // a normal path, not an error: BE returns 404 ("Guest not found") for it.
+                // Only surface unexpected failures to the console.
+                if (!err.message.startsWith("HTTP 404")) {
+                  console.error("[AuthCallback] migrateGuest error:", err);
+                }
+              })
+              .finally(() => clearGuestId());
+          }
+          navigate("/chat");
+        },
+      )
       .catch((err: Error) => {
-        console.error('AuthCallback error:', err)
-        setError(err.message ?? 'Error desconocido al autenticar.')
-      })
-  }, [navigate])
+        console.error("AuthCallback error:", err);
+        setError(err.message ?? "Error desconocido al autenticar.");
+      });
+  }, [navigate, login]);
 
   if (error) {
     return (
@@ -86,7 +115,7 @@ function AuthCallback() {
           </a>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -96,7 +125,7 @@ function AuthCallback() {
         <p className="text-text text-sm">Procesando login...</p>
       </div>
     </div>
-  )
+  );
 }
 
-export default AuthCallback
+export default AuthCallback;
