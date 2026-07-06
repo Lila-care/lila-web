@@ -3,3 +3,5 @@ if command -v gitleaks >/dev/null 2>&1; then
 else
   echo "gitleaks no instalado (brew install gitleaks) — commit continúa sin escaneo." >&2
 fi
+yarn type-check
+yarn lint-staged

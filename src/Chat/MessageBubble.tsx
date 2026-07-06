@@ -25,12 +25,12 @@ function MessageBubble({ message }: MessageBubbleProps) {
       >
         <div className="max-w-[80%]">
           <div
-            className="rounded-[20px] rounded-br-[6px] px-[17px] py-[13px] text-[15.5px] leading-[1.5] text-white"
-            style={{ background: "#B89FE8" }}
+            className="rounded-[16px] rounded-br-[4px] px-[17px] py-[13px] text-[15px] leading-[1.5] text-white"
+            style={{ background: "#4A2D6E" }}
           >
             {message.content}
           </div>
-          <p className="text-xs text-[#7c6383] mt-1 text-right">
+          <p className="text-xs text-[#8A8194] mt-1 text-right">
             {formatTime(message.timestamp)}
           </p>
         </div>
@@ -51,12 +51,15 @@ function MessageBubble({ message }: MessageBubbleProps) {
       />
       <div className="max-w-[80%]">
         <div
-          className="rounded-[20px] rounded-bl-[6px] px-[17px] py-[13px] text-[15.5px] leading-[1.5] text-[#3D1F47] prose prose-sm max-w-none"
-          style={{ background: "#F4ECFD" }}
+          className="rounded-[16px] rounded-bl-[4px] px-[17px] py-[13px] text-[15px] leading-[1.55] text-[#2A2530] prose prose-sm max-w-none"
+          style={{
+            background: "#fff",
+            border: "1px solid rgba(74,45,110,.07)",
+          }}
         >
           <ReactMarkdown>{message.content}</ReactMarkdown>
         </div>
-        <p className="text-xs text-[#7c6383] mt-1">
+        <p className="text-xs text-[#8A8194] mt-1">
           {formatTime(message.timestamp)}
         </p>
       </div>

@@ -39,7 +39,8 @@ function Avatar({
   return (
     <div
       data-testid="account-avatar-initials"
-      className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-xs font-semibold shrink-0"
+      className="flex items-center justify-center w-8 h-8 rounded-full text-white text-xs font-semibold shrink-0"
+      style={{ background: "linear-gradient(135deg, #B9A3E3, #a98fdc)" }}
     >
       {initialsSource ? getInitials(initialsSource) : "?"}
     </div>
@@ -79,10 +80,18 @@ function AccountBanner({
         type="button"
         onClick={() => navigate("/login")}
         data-testid="account-banner-guest-trigger"
-        className="flex items-center gap-3 w-full px-4 py-3 bg-white border-t border-gray-100 text-left hover:bg-secondary transition"
+        className="flex items-center gap-3 w-full p-2 rounded-xl text-left transition-colors"
+        style={{
+          background: "#fff",
+          border: "1px solid rgba(74,45,110,.06)",
+          boxShadow: "0 1px 3px rgba(74,45,110,.05)",
+        }}
       >
-        <UserCircle size={32} className="text-gray-400 shrink-0" />
-        <span className="flex-1 min-w-0 text-sm text-gray-500 truncate">
+        <UserCircle size={32} className="shrink-0" color="#A79FB2" />
+        <span
+          className="flex-1 min-w-0 text-sm truncate"
+          style={{ color: "#6B6377" }}
+        >
           Guest
         </span>
       </button>
@@ -90,18 +99,24 @@ function AccountBanner({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative px-4 py-3 bg-white border-t border-gray-100"
-    >
+    <div ref={containerRef} className="relative">
       {isMenuOpen && (
         <div
           data-testid="account-menu"
-          className="absolute bottom-full left-4 right-4 mb-2 rounded-lg border border-gray-100 bg-white shadow-lg overflow-hidden"
+          className="absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden"
+          style={{
+            background: "#fff",
+            border: "1px solid rgba(74,45,110,.07)",
+            boxShadow: "0 6px 20px rgba(74,45,110,.12)",
+          }}
         >
           <div
             data-testid="account-menu-email"
-            className="px-4 py-3 text-sm text-gray-500 truncate border-b border-gray-100"
+            className="px-4 py-3 text-sm truncate"
+            style={{
+              color: "#6B6377",
+              borderBottom: "1px solid rgba(74,45,110,.07)",
+            }}
           >
             {email}
           </div>
@@ -111,7 +126,16 @@ function AccountBanner({
               onLogout();
             }}
             data-testid="account-logout"
-            className="flex items-center gap-2 w-full px-4 py-3 text-sm text-gray-700 hover:bg-secondary transition"
+            className="flex items-center gap-2 w-full px-4 py-3 text-sm transition-colors"
+            style={{ color: "#2A2530" }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "rgba(185,163,227,.12)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "transparent";
+            }}
           >
             <LogOut size={15} />
             Cerrar sesión
@@ -122,12 +146,18 @@ function AccountBanner({
         type="button"
         onClick={() => setIsMenuOpen((prev) => !prev)}
         data-testid="account-banner-trigger"
-        className="flex items-center gap-3 w-full text-left"
+        className="flex items-center gap-3 w-full p-2 rounded-xl text-left"
+        style={{
+          background: "#fff",
+          border: "1px solid rgba(74,45,110,.06)",
+          boxShadow: "0 1px 3px rgba(74,45,110,.05)",
+        }}
       >
         <Avatar name={name} email={email} picture={picture} />
         <span
           data-testid="account-name"
-          className="flex-1 min-w-0 text-sm text-gray-700 truncate"
+          className="flex-1 min-w-0 text-sm font-semibold truncate"
+          style={{ color: "#2A2530" }}
         >
           {name || email}
         </span>
