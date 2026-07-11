@@ -40,7 +40,7 @@ function ChangePassword() {
     setLoading(true);
     try {
       const tokens = await confirmNewPassword({ email, newPassword, session });
-      login(tokens.idToken);
+      login(tokens);
       navigate("/admin/dashboard");
     } catch {
       setError("No se pudo cambiar la contraseña. Intenta de nuevo.");
