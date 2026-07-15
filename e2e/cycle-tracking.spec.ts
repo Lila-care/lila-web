@@ -1,0 +1,585 @@
+import { test, expect, type Page, type Route } from "@playwright/test";
+
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173";
+const API_URL = process.env.VITE_API_URL ?? "http://localhost:6100";
+
+const CONFIG_BODY = { freeQuestionLimit: 3, upgradePromptLimit: 10 };
+const AGENT_ME_BODY = {
+  userId: "test-user",
+  templateVersion: 1,
+  isGuest: false,
+  hasActiveTemplate: true,
+  freeQuestionLimit: 3,
+  onboarding: { pending: false },
+};
+
+// Builds an unsigned JWT-shaped token (header.payload.signature) — the app only base64-decodes
+// the payload client-side, it never verifies the signature, so a fake signature is enough.
+function fakeIdToken(claims: Record<string, unknown> = {}): string {
+  const header = { alg: "none", typ: "JWT" };
+  const payload = {
+    sub: "test-user",
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    email: "valentina@lila.app",
+    name: "Valentina",
+    ...claims,
+  };
+  const encode = (obj: unknown) =>
+    Buffer.from(JSON.stringify(obj)).toString("base64url");
+  return `${encode(header)}.${encode(payload)}.fakesignature`;
+}
+
+async function fulfillJson(route: Route, body: unknown) {
+  await route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(body),
+  });
+}
+
+async function seedAuthToken(page: Page, token: string) {
+  await page.goto(BASE_URL);
+  await page.evaluate((t) => localStorage.setItem("lila_id_token", t), token);
+}
+
+function periodSummaryBody(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    currentDate: "2026-07-10",
+    cycleId: "cycle-1",
+    lastPeriod: { start: "2026-07-08", length: 5 },
+    cycle: {
+      averageLength: 28,
+      predictedNextStart: "2026-08-05",
+      confidence: 0.8,
+      predictedOvulation: "2026-07-22",
+      ovulationConfidence: 0.7,
+      averageLutealLength: 14,
+      fertileWindowStart: "2026-07-19",
+      fertileWindowEnd: "2026-07-23",
+      currentCycleDay: 3,
+    },
+    activePeriod: { isActive: true, day: 3 },
+    ...overrides,
+  };
+}
+
+function weekMetricsBody(todayDate: string) {
+  const dayOfWeekNames = [
+    "SUNDAY",
+    "MONDAY",
+    "TUESDAY",
+    "WEDNESDAY",
+    "THURSDAY",
+    "FRIDAY",
+    "SATURDAY",
+  ] as const;
+  const today = new Date(`${todayDate}T00:00:00Z`);
+  const sunday = new Date(today);
+  sunday.setUTCDate(today.getUTCDate() - today.getUTCDay());
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(sunday);
+    d.setUTCDate(sunday.getUTCDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    return {
+      isToday: iso === todayDate,
+      dayOfWeekIndex: i,
+      dayOfWeek: dayOfWeekNames[i],
+      phaseName: i < 3 ? "MENSTRUATION" : i < 5 ? "FOLLICULAR" : null,
+      date: iso,
+    };
+  });
+}
+
+async function mockAuthenticatedShell(page: Page) {
+  await page.route(`${API_URL}/lila/config`, (route) =>
+    fulfillJson(route, CONFIG_BODY),
+  );
+  await page.route(`${API_URL}/lila/agent/me`, (route) =>
+    fulfillJson(route, AGENT_ME_BODY),
+  );
+  await page.route(`${API_URL}/lila/conversations`, (route) =>
+    fulfillJson(route, []),
+  );
+  await page.route(`${API_URL}/period/summary`, (route) =>
+    fulfillJson(route, periodSummaryBody()),
+  );
+  await page.route(`${API_URL}/user-phase/metrics/*`, (route) => {
+    const url = new URL(route.request().url());
+    const date = url.pathname.split("/").pop() ?? "2026-07-10";
+    return fulfillJson(route, weekMetricsBody(date));
+  });
+}
+
+test.describe("Cycle tracking — navegación por sidebar", () => {
+  test("navega por las 6 rutas y resalta el item activo", async ({ page }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.goto(`${BASE_URL}/hoy`);
+    await expect(page.getByTestId("nav-item-hoy")).toBeVisible();
+
+    const routes: Array<{ href: string; navTestId: string }> = [
+      { href: "/chat", navTestId: "nav-item-chat" },
+      { href: "/calendario", navTestId: "nav-item-calendario" },
+      { href: "/aprende", navTestId: "nav-item-aprende" },
+      { href: "/perfil", navTestId: "nav-item-perfil" },
+      { href: "/hoy", navTestId: "nav-item-hoy" },
+    ];
+
+    for (const { href, navTestId } of routes) {
+      await page.getByTestId(navTestId).click();
+      await page.waitForURL(`${BASE_URL}${href}`);
+      // El item activo del sidebar tiene fondo lila sólido (#9B72C8) vía inline style.
+      await expect(page.getByTestId(navTestId)).toHaveCSS(
+        "background-color",
+        "rgb(155, 114, 200)",
+      );
+    }
+  });
+
+  test("link Diario está deshabilitado y no navega", async ({ page }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.goto(`${BASE_URL}/hoy`);
+
+    const diario = page.getByTestId("nav-item-diario");
+    await expect(diario).toBeVisible();
+    await expect(diario).toHaveAttribute("aria-disabled", "true");
+    await diario.click({ force: true });
+    // No navegó — seguimos en /hoy.
+    await expect(page).toHaveURL(`${BASE_URL}/hoy`);
+  });
+});
+
+test.describe("/hoy", () => {
+  test("muestra el día y la fase del ciclo con datos mockeados", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.goto(`${BASE_URL}/hoy`);
+
+    await expect(page.getByTestId("phase-hero-card")).toBeVisible();
+    await expect(page.getByTestId("phase-hero-cycle-day")).toContainText("Día 3");
+    await expect(page.getByTestId("week-strip")).toBeVisible();
+    await expect(page.getByTestId("week-strip-day")).toHaveCount(7);
+  });
+
+  test("botón Registrar síntomas está deshabilitado y no dispara requests", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    let symptomsRequestFired = false;
+    await page.route(`${API_URL}/**/symptoms*`, (route) => {
+      symptomsRequestFired = true;
+      return route.abort();
+    });
+
+    await page.goto(`${BASE_URL}/hoy`);
+
+    const button = page.getByTestId("quick-action-symptoms");
+    await expect(button).toBeDisabled();
+    await button.click({ force: true });
+    expect(symptomsRequestFired).toBe(false);
+  });
+});
+
+test.describe("/calendario", () => {
+  test("muestra la grilla del mes y el panel de detalle del día actual", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.goto(`${BASE_URL}/calendario`);
+
+    await expect(page.getByTestId("month-grid")).toBeVisible();
+    const dayCells = page.getByTestId("calendar-day-cell");
+    await expect(dayCells.first()).toBeVisible();
+    await expect(page.getByTestId("day-detail-panel")).toBeVisible();
+  });
+
+  test("botón Añadir registro está deshabilitado y no dispara requests", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    let addRecordFired = false;
+    await page.route(`${API_URL}/**/records*`, (route) => {
+      addRecordFired = true;
+      return route.abort();
+    });
+
+    await page.goto(`${BASE_URL}/calendario`);
+
+    const button = page.getByTestId("add-record-button");
+    await expect(button).toBeDisabled();
+    await button.click({ force: true });
+    expect(addRecordFired).toBe(false);
+  });
+
+  test("toggle Ambos/Ciclo/Luna filtra lo que muestran la grilla y el panel de detalle", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.goto(`${BASE_URL}/calendario`);
+
+    // "Ambos" es el default — leyenda de fases y bloque de luna visibles.
+    await expect(page.getByTestId("view-mode-ambos")).toBeVisible();
+    await expect(page.getByTestId("phase-legend")).toBeVisible();
+    await expect(page.getByTestId("day-detail-moon-block")).toBeVisible();
+
+    // "Ciclo" — mantiene la leyenda de fases, oculta el bloque de luna del panel de detalle.
+    await page.getByTestId("view-mode-ciclo").click();
+    await expect(page.getByTestId("phase-legend")).toBeVisible();
+    await expect(page.getByTestId("day-detail-moon-block")).toHaveCount(0);
+    await expect(page.getByTestId("day-detail-panel")).toBeVisible();
+
+    // "Luna" — oculta la leyenda de fases; el panel de detalle muestra la fase lunar, no la de ciclo.
+    await page.getByTestId("view-mode-luna").click();
+    await expect(page.getByTestId("phase-legend")).toHaveCount(0);
+    await expect(page.getByTestId("day-detail-moon-block")).toBeVisible();
+
+    // Vuelve a "Ambos" — todo reaparece.
+    await page.getByTestId("view-mode-ambos").click();
+    await expect(page.getByTestId("phase-legend")).toBeVisible();
+    await expect(page.getByTestId("day-detail-moon-block")).toBeVisible();
+  });
+
+  // Regression test for: getPhaseInfo(null) devolvía un fallback pastel/translúcido
+  // (rgba(61,43,80,0.15) + gradiente casi blanco) que dejaba el texto blanco del panel de
+  // detalle prácticamente invisible en días sin datos de fase. Fix: fallback sólido de la
+  // familia de marca (#5C4D73/#6B5C7D/#7A6B92), cada tono con contraste WCAG AA >= 4.5:1
+  // contra texto blanco. Este test verifica el color renderizado real (rgb equivalente del
+  // computed style), no solo que el panel sea visible.
+  test("día sin datos de fase usa el gradiente neutro sólido nuevo, no el fallback pastel viejo", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.goto(`${BASE_URL}/calendario`);
+    await page.waitForLoadState("networkidle");
+
+    // weekMetricsBody marca los días de índice 5 y 6 (viernes/sábado) de cada semana devuelta
+    // con phaseName: null — buscamos la primera celda visible que caiga en esos días.
+    const targetDate = await page.evaluate(() => {
+      const cells = Array.from(
+        document.querySelectorAll('[data-testid="calendar-day-cell"]'),
+      );
+      for (const cell of cells) {
+        const date = cell.getAttribute("data-date");
+        if (!date) continue;
+        const dayOfWeek = new Date(`${date}T00:00:00`).getDay();
+        if (dayOfWeek === 5 || dayOfWeek === 6) return date;
+      }
+      return null;
+    });
+    expect(targetDate).not.toBeNull();
+
+    await page
+      .locator(`[data-testid="calendar-day-cell"][data-date="${targetDate}"]`)
+      .click();
+
+    const panel = page.getByTestId("day-detail-panel");
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText("Sin datos de fase");
+
+    const backgroundImage = await panel.evaluate(
+      (el) => getComputedStyle(el).backgroundImage,
+    );
+    // rgb equivalentes de #5C4D73, #6B5C7D, #7A6B92 — el navegador normaliza hex a rgb() en
+    // el computed style. Confirma que el gradiente sólido nuevo se está aplicando de verdad,
+    // no solo que el panel "se ve".
+    expect(backgroundImage).toContain("92, 77, 115");
+    expect(backgroundImage).toContain("107, 92, 125");
+    expect(backgroundImage).toContain("122, 107, 146");
+  });
+
+  // Pulido menor pedido junto al fix de contraste: una celda "hoy" sin phaseName debe seguir
+  // distinguiéndose de un día cualquiera (antes quedaba completamente plana). Fuerza un día del
+  // mes visible como isToday:true con phaseName:null, evitando coincidir con selectedDate
+  // (que por defecto es el día real de hoy) para poder verificar el anillo de "hoy" sin que el
+  // anillo de "seleccionado" lo tape.
+  test("celda de 'hoy' sin phaseName muestra el anillo neutro cuando no está seleccionada", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const realDay = now.getUTCDate();
+    const targetDay = realDay === 15 ? 16 : 15;
+    const targetDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(targetDay).padStart(2, "0")}`;
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(route, AGENT_ME_BODY),
+    );
+    await page.route(`${API_URL}/lila/conversations`, (route) =>
+      fulfillJson(route, []),
+    );
+    await page.route(`${API_URL}/period/summary`, (route) =>
+      fulfillJson(route, periodSummaryBody()),
+    );
+    await page.route(`${API_URL}/user-phase/metrics/*`, (route) => {
+      const url = new URL(route.request().url());
+      const anchor = url.pathname.split("/").pop() ?? targetDate;
+      const week = weekMetricsBody(anchor).map((day) =>
+        day.date === targetDate
+          ? { ...day, isToday: true, phaseName: null }
+          : day,
+      );
+      return fulfillJson(route, week);
+    });
+
+    await seedAuthToken(page, token);
+    await page.goto(`${BASE_URL}/calendario`);
+    await page.waitForLoadState("networkidle");
+
+    const todayCell = page.locator(
+      `[data-testid="calendar-day-cell"][data-date="${targetDate}"]`,
+    );
+    await expect(todayCell).toBeVisible();
+    await expect(todayCell).toHaveAttribute("data-today", "true");
+
+    const boxShadow = await todayCell.evaluate(
+      (el) => getComputedStyle(el).boxShadow,
+    );
+    // rgb equivalente de #6B5C7D (NO_PHASE_INFO.dotColor) — mismo tono neutro que el fallback
+    // de phaseInfo.ts, no el color de una fase real.
+    expect(boxShadow).toContain("107, 92, 125");
+  });
+});
+
+test.describe("/chat conserva funcionalidad con el shell nuevo", () => {
+  test("smoke test — sidebar nuevo + chat funcional", async ({ page }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.goto(`${BASE_URL}/chat`);
+
+    await expect(page.getByTestId("app-sidebar")).toBeVisible();
+    await expect(page.getByTestId("nav-item-chat")).toBeVisible();
+    await expect(page.getByTestId("empty-state")).toBeVisible();
+  });
+});
+
+test.describe("/perfil", () => {
+  test("banner Crear cuenta se muestra en estado guest y navega a /login", async ({
+    page,
+  }) => {
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(route, AGENT_ME_BODY),
+    );
+
+    await page.goto(`${BASE_URL}/perfil`);
+
+    await expect(page.getByTestId("create-account-banner")).toBeVisible();
+    await page.getByTestId("create-account-button").click();
+    await expect(page).toHaveURL(`${BASE_URL}/login`);
+  });
+
+  test("banner Crear cuenta no se muestra con sesión autenticada", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.goto(`${BASE_URL}/perfil`);
+
+    await expect(page.getByTestId("create-account-banner")).toHaveCount(0);
+  });
+
+  test("guardar última regla + duración dispara un único POST /period/start con el shape correcto", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    let postCount = 0;
+    let capturedBody: Record<string, unknown> | null = null;
+
+    await page.route(`${API_URL}/period/start`, async (route) => {
+      postCount += 1;
+      capturedBody = route.request().postDataJSON();
+      await fulfillJson(route, periodSummaryBody({ cycleId: "cycle-2" }));
+    });
+
+    await page.goto(`${BASE_URL}/perfil`);
+
+    await expect(page.getByTestId("cycle-form")).toBeVisible();
+    await page.getByTestId("cycle-length-select").selectOption("30");
+    await page.getByTestId("last-period-input").fill("2026-07-05");
+    await page.getByTestId("cycle-form-submit").click();
+
+    await expect(page.getByTestId("cycle-form-success")).toBeVisible();
+    expect(postCount).toBe(1);
+    expect(capturedBody).toMatchObject({
+      reportedStartDate: "2026-07-05",
+      source: "USER",
+      periodLength: expect.any(Number),
+      cycleLength: 30,
+    });
+    expect(typeof (capturedBody as Record<string, unknown>).reportedAt).toBe(
+      "string",
+    );
+  });
+
+  test("botones Descargar mis datos y Borrar todo están deshabilitados y no disparan requests", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    let dataRequestFired = false;
+    await page.route(`${API_URL}/**/export*`, (route) => {
+      dataRequestFired = true;
+      return route.abort();
+    });
+    await page.route(`${API_URL}/**/delete*`, (route) => {
+      dataRequestFired = true;
+      return route.abort();
+    });
+
+    await page.goto(`${BASE_URL}/perfil`);
+
+    const downloadButton = page.getByTestId("download-data-button");
+    const deleteButton = page.getByTestId("delete-all-button");
+    await expect(downloadButton).toBeDisabled();
+    await expect(deleteButton).toBeDisabled();
+    await downloadButton.click({ force: true });
+    await deleteButton.click({ force: true });
+    expect(dataRequestFired).toBe(false);
+  });
+
+  test("notificaciones son toggles locales — no disparan requests al cambiar", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    let notificationRequestFired = false;
+    await page.route(`${API_URL}/**/notifications*`, (route) => {
+      notificationRequestFired = true;
+      return route.abort();
+    });
+
+    await page.goto(`${BASE_URL}/perfil`);
+
+    const toggle = page.getByTestId("toggle-journal-reminder");
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    expect(notificationRequestFired).toBe(false);
+  });
+});
+
+test.describe("/perfil/privacidad", () => {
+  test("botones Próximamente están deshabilitados", async ({ page }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.goto(`${BASE_URL}/perfil/privacidad`);
+
+    await expect(page.getByTestId("privacidad-download-button")).toBeDisabled();
+    await expect(page.getByTestId("privacidad-delete-button")).toBeDisabled();
+  });
+});
+
+test.describe("Responsive 768px — DataPrivacyCard no se comprime con el sidebar real", () => {
+  // Regression test for: a 768px, el Sidebar fijo (~248px + padding) reduce el ancho real del
+  // <main> a ~520-560px. DataPrivacyCard.tsx usaba `md:flex-row` (activa a 768px) con un bloque
+  // de botones `shrink-0`/`whitespace-nowrap` que no cedía espacio — el bloque de texto quedaba
+  // comprimido a una columna angosta, envolviendo palabra por palabra. Fix: el layout pasa a
+  // `lg:flex-row` (1024px) en vez de `md:flex-row`, así que a 768px el texto ocupa el ancho
+  // completo del <main> en su propia fila. Este test navega /perfil completo (con el Sidebar
+  // real montado vía AppShell), no la card en aislamiento — así es como QA reprodujo el bug.
+  test("el texto de 'Datos y privacidad' no se envuelve en columnas de una palabra a 768px", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto(`${BASE_URL}/perfil`);
+    await page.waitForLoadState("networkidle");
+
+    // El sidebar fijo debe estar presente y visible — si no lo está, la medición de abajo no
+    // reproduce el escenario real que QA reportó.
+    await expect(page.getByTestId("app-sidebar")).toBeVisible();
+
+    const card = page.getByTestId("data-privacy-card");
+    await expect(card).toBeVisible();
+
+    const textBlock = page.getByTestId("data-privacy-description");
+    await expect(textBlock).toBeVisible();
+    const box = await textBlock.evaluate((el) => ({
+      width: (el as HTMLElement).clientWidth,
+      height: (el as HTMLElement).clientHeight,
+    }));
+    // El bloque de texto tiene ~85 caracteres a 14.5px — un ancho por debajo de ~150px solo es
+    // posible si está envolviendo casi palabra por palabra (compresión), no por su max-w-[460px]
+    // declarado. En el layout arreglado (flex-col a 768px), el bloque ocupa el ancho completo
+    // disponible del <main> (varios cientos de px).
+    expect(box.width).toBeGreaterThan(150);
+    // Con ese ancho, dos líneas de ~14.5px/1.5 line-height alcanzan para el texto completo —
+    // una compresión palabra-por-palabra produciría muchas más líneas y una altura desproporcionada.
+    expect(box.height).toBeLessThan(100);
+
+    // Sin overflow horizontal a 768px tampoco.
+    const hasOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasOverflow).toBe(false);
+  });
+});
+
+test.describe("Responsive 375px — sin overflow horizontal", () => {
+  const routes = ["/hoy", "/chat", "/calendario", "/aprende", "/perfil", "/perfil/privacidad"];
+
+  for (const route of routes) {
+    test(`${route} no tiene overflow horizontal en 375px`, async ({ page }) => {
+      const token = fakeIdToken();
+      await mockAuthenticatedShell(page);
+      await seedAuthToken(page, token);
+
+      await page.setViewportSize({ width: 375, height: 812 });
+      await page.goto(`${BASE_URL}${route}`);
+      await page.waitForLoadState("networkidle");
+
+      const hasOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      );
+      expect(hasOverflow).toBe(false);
+    });
+  }
+});

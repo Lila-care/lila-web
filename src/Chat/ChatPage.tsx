@@ -3,15 +3,16 @@ import { Menu, X, Bell, MoreVertical } from "lucide-react";
 import { useAuth } from "@/auth/AuthContext";
 import { getConversations } from "@/api/lila";
 import type { ConversationSummary } from "@/api/lila";
+import Sidebar from "@/components/AppShell/Sidebar";
+import MobileNav from "@/components/AppShell/MobileNav";
 import { useLilaChat } from "./useLilaChat";
 import ChatWindow from "./ChatWindow";
 import ConversationList from "./ConversationList";
-import AccountBanner from "./AccountBanner";
 import LoginGateModal from "./LoginGateModal";
 import UpgradeGateModal from "./UpgradeGateModal";
 
 function ChatPage() {
-  const { token, email, name, picture, logout } = useAuth();
+  const { token } = useAuth();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -72,7 +73,11 @@ function ChatPage() {
       className="flex h-screen overflow-hidden"
       style={{ background: "#FAF8FC" }}
     >
-      {/* Sidebar — always shown for both guests and authenticated users, including empty state */}
+      {/* Shell principal — nav Hoy/Chat/Calendario/Aprende/Perfil, compartido con el resto de la app */}
+      <Sidebar />
+      <MobileNav />
+
+      {/* Rail de conversaciones — específico de /chat, se mantiene independiente del nav principal */}
       <aside
         className={`
           fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300
@@ -84,14 +89,6 @@ function ChatPage() {
           borderRight: "1px solid rgba(74,45,110,.07)",
         }}
       >
-        {/* Sidebar header with logo */}
-        <div className="flex items-center gap-2 px-4 py-4">
-          <img src="/sello_vinotinto.svg" alt="Lila" className="w-8 h-8" />
-          <span className="font-semibold text-lg" style={{ color: "#4A2D6E" }}>
-            Lila
-          </span>
-        </div>
-
         <div className="flex-1 overflow-hidden">
           <ConversationList
             conversations={conversations}
@@ -99,19 +96,6 @@ function ChatPage() {
             onSelect={handleSelectConversation}
             onNew={handleNewConversation}
             isAuthenticated={!!token}
-          />
-        </div>
-
-        <div
-          className="px-3 pb-3 pt-2"
-          style={{ borderTop: "1px solid rgba(74,45,110,.07)" }}
-        >
-          <AccountBanner
-            email={email}
-            name={name}
-            picture={picture}
-            isAuthenticated={!!token}
-            onLogout={logout}
           />
         </div>
       </aside>
