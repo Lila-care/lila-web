@@ -1,11 +1,10 @@
 import { getPhaseInfo } from "@/lib/phaseInfo";
-import { getMoonPhase } from "@/lib/moonPhase";
-import type { DayPhaseUiModel } from "@/api/cycleTracking";
+import type { CalendarDayUiModel } from "@/Calendario/useCalendario";
 import type { CalendarViewMode } from "@/Calendario/ViewModeToggle";
 
 interface DayDetailPanelProps {
   date: string | null;
-  dayData: DayPhaseUiModel | undefined;
+  dayData: CalendarDayUiModel | undefined;
   viewMode: CalendarViewMode;
 }
 
@@ -26,7 +25,10 @@ function DayDetailPanel({ date, dayData, viewMode }: DayDetailPanelProps) {
       <div
         data-testid="day-detail-empty"
         className="rounded-[32px] p-8 text-sm"
-        style={{ background: "rgba(61,43,80,0.05)", color: "rgba(61,43,80,0.6)" }}
+        style={{
+          background: "rgba(61,43,80,0.05)",
+          color: "rgba(61,43,80,0.6)",
+        }}
       >
         Selecciona un día en el calendario para ver el detalle.
       </div>
@@ -36,7 +38,12 @@ function DayDetailPanel({ date, dayData, viewMode }: DayDetailPanelProps) {
   const showCycle = viewMode !== "luna";
   const showMoon = viewMode !== "ciclo";
   const info = getPhaseInfo(dayData?.phaseName ?? null);
-  const moon = getMoonPhase(new Date(`${date}T00:00:00`));
+  // Dato lunar viene de useCalendario (fetch de /moon-phase/range). Si todavía no cargó o falló
+  // (moonPhaseName/moonIllumination en null), se oculta el bloque en vez de mostrar un valor
+  // incorrecto — mismo criterio que "Sin datos de fase" usa para el ciclo.
+  const moonPhaseName = dayData?.moonPhaseName ?? null;
+  const moonIllumination = dayData?.moonIllumination ?? null;
+  const hasMoonData = moonPhaseName != null && moonIllumination != null;
   // Reusa el gradiente sólido de phaseInfo.ts en vez de construir uno propio con alpha
   // (`${dotColor}cc`) — ese patrón dependía del color de fondo detrás del panel para el
   // contraste final, lo cual era frágil (el fallback de "sin datos" quedaba casi invisible
@@ -51,7 +58,9 @@ function DayDetailPanel({ date, dayData, viewMode }: DayDetailPanelProps) {
       className="rounded-[32px] p-8 text-white"
       style={{ background: gradient }}
     >
-      <div className="text-[13px] text-white/70 mb-1 capitalize">{formatLongDate(date)}</div>
+      <div className="text-[13px] text-white/70 mb-1 capitalize">
+        {formatLongDate(date)}
+      </div>
       <div
         className="font-bold text-2xl mb-4"
         style={{ fontFamily: "'Playfair Display', serif" }}
@@ -60,22 +69,31 @@ function DayDetailPanel({ date, dayData, viewMode }: DayDetailPanelProps) {
           ? dayData?.phaseName
             ? info.label
             : "Sin datos de fase"
-          : moon.phaseName}
+          : hasMoonData
+            ? moonPhaseName
+            : "Sin datos de luna"}
       </div>
 
-      {showMoon && (
-        <div className="bg-white/10 rounded-2xl p-4 mb-3.5" data-testid="day-detail-moon-block">
-          <div className="text-[11.5px] uppercase tracking-wide text-white/60 mb-1.5">Luna</div>
+      {showMoon && hasMoonData && (
+        <div
+          className="bg-white/10 rounded-2xl p-4 mb-3.5"
+          data-testid="day-detail-moon-block"
+        >
+          <div className="text-[11.5px] uppercase tracking-wide text-white/60 mb-1.5">
+            Luna
+          </div>
           <div className="flex items-center gap-2.5">
             <div className="text-[14.5px] font-semibold">
-              {moon.phaseName} · {moon.illumination}%
+              {moonPhaseName} · {moonIllumination}%
             </div>
           </div>
         </div>
       )}
 
       <div className="bg-white/10 rounded-2xl p-4">
-        <div className="text-[11.5px] uppercase tracking-wide text-white/60 mb-1.5">Registro</div>
+        <div className="text-[11.5px] uppercase tracking-wide text-white/60 mb-1.5">
+          Registro
+        </div>
         <div className="text-sm leading-relaxed text-white/85">
           Sin síntomas registrados todavía hoy.
         </div>

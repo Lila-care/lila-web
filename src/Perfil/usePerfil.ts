@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAuth } from "@/auth/AuthContext";
 import {
-  getPeriodSummary,
   reportPeriodStart,
   PeriodStartSource,
   type PeriodSummary,
 } from "@/api/cycleTracking";
+import { usePeriodSummary } from "@/hooks/usePeriodSummary";
 
 interface CycleFormValues {
   lastPeriodStart: string;
@@ -27,39 +27,15 @@ interface UsePerfilReturn {
 // última regla juntos en un único submit (regla del contrato técnico).
 export function usePerfil(): UsePerfilReturn {
   const { token } = useAuth();
-  const [summary, setSummary] = useState<PeriodSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { summary: fetchedSummary, loading, error } = usePeriodSummary();
+  // reportPeriodStart ya devuelve el PeriodSummary actualizado — lo guardamos aparte en vez de
+  // forzar un refetch, y lo priorizamos sobre el valor fetcheado por el hook compartido mientras
+  // no haya un remount (usePeriodSummary solo hace fetch on mount / cambio de token).
+  const [savedSummary, setSavedSummary] = useState<PeriodSummary | null>(null);
+  const summary = savedSummary ?? fetchedSummary;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    getPeriodSummary(token)
-      .then((res) => {
-        if (!cancelled) setSummary(res);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Error al cargar tu ciclo");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
 
   const saveCycleInfo = useCallback(
     async (values: CycleFormValues) => {
@@ -75,7 +51,7 @@ export function usePerfil(): UsePerfilReturn {
           periodLength: values.periodLength,
           cycleLength: values.cycleLength,
         });
-        setSummary(updated);
+        setSavedSummary(updated);
         setSaveSuccess(true);
       } catch (err) {
         setSaveError(
@@ -88,5 +64,13 @@ export function usePerfil(): UsePerfilReturn {
     [token, saving],
   );
 
-  return { summary, loading, error, saving, saveError, saveSuccess, saveCycleInfo };
+  return {
+    summary,
+    loading,
+    error,
+    saving,
+    saveError,
+    saveSuccess,
+    saveCycleInfo,
+  };
 }

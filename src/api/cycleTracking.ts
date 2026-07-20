@@ -105,3 +105,34 @@ export async function reportPeriodStart(
   });
   return handleResponse<PeriodSummary>(res);
 }
+
+
+// --- Fase lunar (endpoint público — sin auth) ---
+
+export type MoonPhaseName =
+  | "Luna nueva"
+  | "Luna creciente"
+  | "Cuarto creciente"
+  | "Luna gibosa creciente"
+  | "Luna llena"
+  | "Luna gibosa menguante"
+  | "Cuarto menguante"
+  | "Luna menguante";
+
+export interface MoonPhaseRangeDay {
+  date: string; // YYYY-MM-DD
+  phaseName: MoonPhaseName | null;
+  illumination: number | null; // 0-100
+}
+
+// Sin authHeaders/token a propósito: es información pública, igual para cualquier usuaria
+// (incluye guests sin sesión) — no usar `authFetch`/Authorization aquí.
+export async function getMoonPhaseRange(
+  start: string,
+  end: string,
+): Promise<MoonPhaseRangeDay[]> {
+  const res = await fetch(
+    `${BASE_URL}/moon-phase/range?start=${start}&end=${end}`,
+  );
+  return handleResponse<MoonPhaseRangeDay[]>(res);
+}

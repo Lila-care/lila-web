@@ -3,16 +3,28 @@ import AppShell from "@/components/AppShell/AppShell";
 import { useCalendario } from "@/Calendario/useCalendario";
 import MonthGrid from "@/Calendario/MonthGrid";
 import DayDetailPanel from "@/Calendario/DayDetailPanel";
-import ViewModeToggle, { type CalendarViewMode } from "@/Calendario/ViewModeToggle";
+import ResumenPerfilCard from "@/Calendario/ResumenPerfilCard";
+import ViewModeToggle, {
+  type CalendarViewMode,
+} from "@/Calendario/ViewModeToggle";
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 function CalendarioPage() {
-  const { year, month, days, loading, error, goToPreviousMonth, goToNextMonth } =
-    useCalendario();
-  const [selectedDate, setSelectedDate] = useState<string | null>(todayIsoDate());
+  const {
+    year,
+    month,
+    days,
+    loading,
+    error,
+    goToPreviousMonth,
+    goToNextMonth,
+  } = useCalendario();
+  const [selectedDate, setSelectedDate] = useState<string | null>(
+    todayIsoDate(),
+  );
   const [viewMode, setViewMode] = useState<CalendarViewMode>("ambos");
 
   const selectedDayData = days.find((d) => d.date === selectedDate);
@@ -50,7 +62,10 @@ function CalendarioPage() {
           <div
             data-testid="calendario-error"
             className="bg-white rounded-3xl p-8 text-sm"
-            style={{ border: "1px solid rgba(139,58,82,0.2)", color: "#8B3A52" }}
+            style={{
+              border: "1px solid rgba(139,58,82,0.2)",
+              color: "#8B3A52",
+            }}
           >
             No pudimos cargar tu calendario. {error}
           </div>
@@ -68,7 +83,14 @@ function CalendarioPage() {
               onPrevMonth={goToPreviousMonth}
               onNextMonth={goToNextMonth}
             />
-            <DayDetailPanel date={selectedDate} dayData={selectedDayData} viewMode={viewMode} />
+            <div className="flex flex-col gap-6">
+              <ResumenPerfilCard />
+              <DayDetailPanel
+                date={selectedDate}
+                dayData={selectedDayData}
+                viewMode={viewMode}
+              />
+            </div>
           </div>
         )}
       </main>

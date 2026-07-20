@@ -1,5 +1,5 @@
 import { getPhaseInfo } from "@/lib/phaseInfo";
-import { getMoonPhase } from "@/lib/moonPhase";
+import { usePhaseHeroMoon } from "@/Hoy/usePhaseHeroMoon";
 import type { PhaseName } from "@/api/cycleTracking";
 
 interface PhaseHeroCardProps {
@@ -14,13 +14,13 @@ const PHASE_MESSAGE: Record<PhaseName, string> = {
     "Tu energía empieza a subir. Buen momento para planear y moverte más.",
   OVULATION:
     "Estás en tu pico de energía. Buen momento para conversaciones y conexión.",
-  LUTEAL:
-    "Tu energía baja poco a poco. El cuerpo pide orden y calma.",
+  LUTEAL: "Tu energía baja poco a poco. El cuerpo pide orden y calma.",
 };
 
 function PhaseHeroCard({ phase, cycleDay }: PhaseHeroCardProps) {
   const info = getPhaseInfo(phase);
-  const moon = getMoonPhase();
+  const { moon, loading: moonLoading } = usePhaseHeroMoon();
+  const hasMoonData = moon?.phaseName != null && moon?.illumination != null;
 
   return (
     <div
@@ -48,17 +48,32 @@ function PhaseHeroCard({ phase, cycleDay }: PhaseHeroCardProps) {
             {cycleDay != null ? `Día ${cycleDay}` : "Sin datos"}
           </div>
           <div className="text-[15px] leading-relaxed text-white/90 max-w-[400px]">
-            {phase ? PHASE_MESSAGE[phase] : "Aún no tenemos suficientes datos de tu ciclo."}
+            {phase
+              ? PHASE_MESSAGE[phase]
+              : "Aún no tenemos suficientes datos de tu ciclo."}
           </div>
         </div>
-        <div className="text-right shrink-0" data-testid="moon-phase-widget">
-          <div className="flex items-center gap-2.5 justify-end mb-2">
-            <div className="text-[14.5px] font-semibold">{moon.phaseName}</div>
+        {moonLoading && (
+          <div
+            className="text-right shrink-0 animate-pulse"
+            data-testid="moon-phase-widget-loading"
+          >
+            <div className="h-[18px] w-24 bg-white/20 rounded-full mb-2 ml-auto" />
+            <div className="h-3 w-14 bg-white/15 rounded-full ml-auto" />
           </div>
-          <div className="text-[12.5px] text-white/70">
-            {moon.illumination}% visible
+        )}
+        {!moonLoading && hasMoonData && (
+          <div className="text-right shrink-0" data-testid="moon-phase-widget">
+            <div className="flex items-center gap-2.5 justify-end mb-2">
+              <div className="text-[14.5px] font-semibold">
+                {moon!.phaseName}
+              </div>
+            </div>
+            <div className="text-[12.5px] text-white/70">
+              {moon!.illumination}% visible
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
