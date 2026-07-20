@@ -1,4 +1,4 @@
-import { Plus, MessageCircle } from "lucide-react";
+import { Plus, MessageCircle, Trash2 } from "lucide-react";
 import type { ConversationSummary } from "@/api/lila";
 
 interface ConversationListProps {
@@ -6,6 +6,7 @@ interface ConversationListProps {
   currentId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
+  onDelete: (id: string) => void;
   isAuthenticated: boolean;
 }
 
@@ -19,6 +20,7 @@ function ConversationList({
   currentId,
   onSelect,
   onNew,
+  onDelete,
   isAuthenticated,
 }: ConversationListProps) {
   return (
@@ -77,42 +79,64 @@ function ConversationList({
           conversations.map((conv) => {
             const active = currentId === conv.id;
             return (
-              <button
+              <div
                 key={conv.id}
-                onClick={() => onSelect(conv.id)}
-                className="w-full flex items-start gap-3 px-3 py-2.5 text-left rounded-[10px] transition-colors"
-                style={{
-                  background: active ? "rgba(185,163,227,.24)" : "transparent",
-                }}
+                className="group relative"
                 onMouseEnter={(e) => {
                   if (active) return;
-                  (e.currentTarget as HTMLButtonElement).style.background =
-                    "rgba(185,163,227,.12)";
+                  (
+                    e.currentTarget.firstChild as HTMLButtonElement
+                  ).style.background = "rgba(185,163,227,.12)";
                 }}
                 onMouseLeave={(e) => {
                   if (active) return;
-                  (e.currentTarget as HTMLButtonElement).style.background =
-                    "transparent";
+                  (
+                    e.currentTarget.firstChild as HTMLButtonElement
+                  ).style.background = "transparent";
                 }}
               >
-                <MessageCircle
-                  size={16}
-                  className="mt-0.5 shrink-0"
-                  color={active ? "#4A2D6E" : "#8A8194"}
-                />
-                <div className="min-w-0">
-                  <p
-                    className="text-sm font-medium truncate"
-                    style={{ color: active ? "#4A2D6E" : "#4B4453" }}
-                  >
-                    {conv.title}
-                  </p>
-                  <p className="text-xs truncate" style={{ color: "#A79FB2" }}>
-                    {formatDate(conv.createdAt)} · {conv.messageCount}{" "}
-                    {conv.messageCount === 1 ? "mensaje" : "mensajes"}
-                  </p>
-                </div>
-              </button>
+                <button
+                  onClick={() => onSelect(conv.id)}
+                  className="w-full flex items-start gap-3 px-3 py-2.5 pr-9 text-left rounded-[10px] transition-colors"
+                  style={{
+                    background: active
+                      ? "rgba(185,163,227,.24)"
+                      : "transparent",
+                  }}
+                >
+                  <MessageCircle
+                    size={16}
+                    className="mt-0.5 shrink-0"
+                    color={active ? "#4A2D6E" : "#8A8194"}
+                  />
+                  <div className="min-w-0">
+                    <p
+                      className="text-sm font-medium truncate"
+                      style={{ color: active ? "#4A2D6E" : "#4B4453" }}
+                    >
+                      {conv.title}
+                    </p>
+                    <p
+                      className="text-xs truncate"
+                      style={{ color: "#A79FB2" }}
+                    >
+                      {formatDate(conv.createdAt)} · {conv.messageCount}{" "}
+                      {conv.messageCount === 1 ? "mensaje" : "mensajes"}
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(conv.id);
+                  }}
+                  aria-label="Eliminar conversación"
+                  title="Eliminar conversación"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/5"
+                >
+                  <Trash2 size={14} color="#A79FB2" />
+                </button>
+              </div>
             );
           })}
       </div>

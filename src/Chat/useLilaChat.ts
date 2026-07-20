@@ -6,12 +6,32 @@ import {
   getConfig,
   getAgentMe,
   reconcileOnboarding,
+  LilaUpgradeRequiredError,
 } from "@/api/lila";
 import type { ChatMessage } from "@/api/lila";
 import { getGuestId } from "@/lib/guest";
 
 const ANON_COUNT_KEY = "lila_anon_count";
-const USER_COUNT_KEY = "lila_user_count";
+const ANON_COUNT_DATE_KEY = "lila_anon_count_date";
+
+// Counters are meant to be daily (the upgrade gate says "vuelve mañana"), but they were plain
+// localStorage counters with no date attached — once a user hit the threshold it stayed hit
+// forever, across any number of days. Stamping each write with the local calendar day and
+// treating a stale/missing stamp as "day changed" makes the reset automatic, including for
+// counts written before this fix (their date key won't exist, so they reset on first read).
+function readDailyCount(countKey: string, dateKey: string): number {
+  if (localStorage.getItem(dateKey) !== new Date().toDateString()) return 0;
+  return parseInt(localStorage.getItem(countKey) ?? "0", 10);
+}
+
+function writeDailyCount(
+  countKey: string,
+  dateKey: string,
+  count: number,
+): void {
+  localStorage.setItem(countKey, String(count));
+  localStorage.setItem(dateKey, new Date().toDateString());
+}
 
 interface UseLilaChatReturn {
   messages: ChatMessage[];
@@ -21,7 +41,8 @@ interface UseLilaChatReturn {
   freeQuestionLimit: number;
   upgradePromptLimit: number;
   anonCount: number;
-  userCount: number;
+  dailyQuestionCount: number;
+  hasActiveSubscription: boolean;
   showLoginGate: boolean;
   showUpgradeGate: boolean;
   hasActiveTemplate: boolean;
@@ -32,13 +53,23 @@ interface UseLilaChatReturn {
   isCheckingOnboarding: boolean;
   setShowLoginGate: (v: boolean) => void;
   setShowUpgradeGate: (v: boolean) => void;
-  sendMessage: (text: string) => Promise<void>;
+  // Resolves `false` when the message was blocked (login/upgrade gate) or failed. On `false`
+  // this hook has already restored the text into `draftText` itself — the caller doesn't need
+  // to re-set it.
+  sendMessage: (text: string) => Promise<boolean>;
   loadConversation: (id: string) => Promise<void>;
   startNewConversation: () => void;
   confirmReconciliation: (
     formId: string,
     answers: { questionId: string; answerText: string }[],
   ) => Promise<void>;
+  refreshSubscriptionStatus: () => void;
+  // Owned here (not by ChatWindow/EmptyState's own local state) so a blocked/failed send can
+  // restore the draft reliably: with zero messages the composer is EmptyState, which fully
+  // unmounts and remounts (losing any local state) during the optimistic add-then-remove of
+  // the user's message that a rejected send triggers — see `send`'s catch branch below.
+  draftText: string;
+  setDraftText: (v: string) => void;
 }
 
 export function useLilaChat(): UseLilaChatReturn {
@@ -50,16 +81,20 @@ export function useLilaChat(): UseLilaChatReturn {
   const [freeQuestionLimit, setFreeQuestionLimit] = useState(3);
   const [upgradePromptLimit, setUpgradePromptLimit] = useState(10);
   const [anonCount, setAnonCount] = useState(() =>
-    parseInt(localStorage.getItem(ANON_COUNT_KEY) ?? "0", 10),
-  );
-  const [userCount, setUserCount] = useState(() =>
-    parseInt(localStorage.getItem(USER_COUNT_KEY) ?? "0", 10),
+    readDailyCount(ANON_COUNT_KEY, ANON_COUNT_DATE_KEY),
   );
   const [showLoginGate, setShowLoginGate] = useState(false);
   const [showUpgradeGate, setShowUpgradeGate] = useState(false);
   const [hasActiveTemplate, setHasActiveTemplate] = useState(true);
   const [onboardingPending, setOnboardingPending] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+  // Authenticated users' daily count and subscription status now come straight from the
+  // server (`GET /lila/agent/me`) instead of a client-side localStorage counter — the daily
+  // free-message limit is enforced server-side (`POST /lila/chat` 403s past `freeQuestionLimit`
+  // for non-subscribers), so the client no longer owns that count for authenticated users.
+  const [dailyQuestionCount, setDailyQuestionCount] = useState(0);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [draftText, setDraftText] = useState("");
 
   // Re-fetches agent/me and syncs the local onboarding flag — reused both on mount and after
   // every turn during onboarding, since the backend has no dedicated "onboarding complete" event.
@@ -68,6 +103,8 @@ export function useLilaChat(): UseLilaChatReturn {
     const agent = await getAgentMe(token, token ? undefined : guestId);
     setHasActiveTemplate(agent.hasActiveTemplate);
     setOnboardingPending(agent.onboarding.pending);
+    setDailyQuestionCount(agent.dailyQuestionCount);
+    setHasActiveSubscription(agent.hasActiveSubscription);
     return agent;
   }, [token]);
 
@@ -157,16 +194,26 @@ export function useLilaChat(): UseLilaChatReturn {
   }, [token]);
 
   const send = useCallback(
-    async (text: string) => {
-      if (!text.trim()) return;
+    async (text: string): Promise<boolean> => {
+      if (!text.trim()) return false;
 
-      // Anonymous threshold gate
+      // Anonymous threshold gate — unchanged, guests aren't rate-limited server-side.
       if (!token) {
-        const count = parseInt(localStorage.getItem(ANON_COUNT_KEY) ?? "0", 10);
+        const count = readDailyCount(ANON_COUNT_KEY, ANON_COUNT_DATE_KEY);
         if (count >= freeQuestionLimit) {
           setShowLoginGate(true);
-          return;
+          setDraftText(text);
+          return false;
         }
+      } else if (
+        !hasActiveSubscription &&
+        dailyQuestionCount >= freeQuestionLimit
+      ) {
+        // Authenticated, no active subscription, already hit today's server-enforced limit —
+        // skip the round trip and show the same gate the 403 below would otherwise trigger.
+        setShowUpgradeGate(true);
+        setDraftText(text);
+        return false;
       }
 
       const userMessage: ChatMessage = {
@@ -205,33 +252,37 @@ export function useLilaChat(): UseLilaChatReturn {
         }
 
         if (token) {
-          // Increment user count after successful response
-          const newCount =
-            parseInt(localStorage.getItem(USER_COUNT_KEY) ?? "0", 10) + 1;
-          localStorage.setItem(USER_COUNT_KEY, String(newCount));
-          setUserCount(newCount);
-          // Upgrade gate disabled for now: this counter never resets by date
-          // (permanently blocks a browser after `upgradePromptLimit` messages,
-          // ever) and "Mejorar mi plan" has no real checkout behind it yet on
-          // main — both land together with the companion ms-lila backend gate
-          // once feat/subscription-checkout ships. Until then, don't strand
-          // real users with no way to actually upgrade.
-          // if (newCount >= upgradePromptLimit) {
-          //   setShowUpgradeGate(true);
-          // }
+          // Server is the source of truth for the daily count now — refresh agent/me instead
+          // of a local counter so `dailyQuestionCount` reflects the message we just sent.
+          refreshAgentMe().catch(() => {});
         } else {
-          // Increment anon count after successful response
+          // Anonymous counting is unchanged (client-side only, no server enforcement yet).
           const newCount =
-            parseInt(localStorage.getItem(ANON_COUNT_KEY) ?? "0", 10) + 1;
-          localStorage.setItem(ANON_COUNT_KEY, String(newCount));
+            readDailyCount(ANON_COUNT_KEY, ANON_COUNT_DATE_KEY) + 1;
+          writeDailyCount(ANON_COUNT_KEY, ANON_COUNT_DATE_KEY, newCount);
           setAnonCount(newCount);
         }
+
+        return true;
       } catch (err) {
+        if (err instanceof LilaUpgradeRequiredError) {
+          // The check runs before Claude is called — the message was never persisted and the
+          // count was never incremented server-side, so drop the optimistic bubble and restore
+          // the draft (owned here, not by whichever composer happens to be mounted) for a retry
+          // after upgrading.
+          setShowUpgradeGate(true);
+          setMessages((prev) => prev.filter((m) => m !== userMessage));
+          setDraftText(text);
+          return false;
+        }
+
         setError(
           err instanceof Error ? err.message : "Error al enviar el mensaje",
         );
-        // Remove optimistic user message on error
+        // Remove optimistic user message on error and restore the draft for a retry.
         setMessages((prev) => prev.filter((m) => m !== userMessage));
+        setDraftText(text);
+        return false;
       } finally {
         setIsLoading(false);
       }
@@ -240,7 +291,8 @@ export function useLilaChat(): UseLilaChatReturn {
       token,
       conversationId,
       freeQuestionLimit,
-      upgradePromptLimit,
+      hasActiveSubscription,
+      dailyQuestionCount,
       onboardingPending,
       refreshAgentMe,
     ],
@@ -299,7 +351,8 @@ export function useLilaChat(): UseLilaChatReturn {
     freeQuestionLimit,
     upgradePromptLimit,
     anonCount,
-    userCount,
+    dailyQuestionCount,
+    hasActiveSubscription,
     showLoginGate,
     showUpgradeGate,
     hasActiveTemplate,
@@ -311,5 +364,10 @@ export function useLilaChat(): UseLilaChatReturn {
     loadConversation,
     startNewConversation,
     confirmReconciliation,
+    refreshSubscriptionStatus: () => {
+      refreshAgentMe().catch(() => {});
+    },
+    draftText,
+    setDraftText,
   };
 }

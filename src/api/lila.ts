@@ -129,6 +129,26 @@ export interface UserAgent {
   // authenticated) with at least 1 message exchanged — lets the FE restore the real
   // conversation on reload instead of re-seeding the generic first-question greeting.
   activeConversation?: ActiveConversation;
+  // For guests: `questionCount` as always (unchanged). For authenticated users: today's
+  // message count (0 if the last message was on a different day) — server-side source of
+  // truth, replaces the client-side `lila_user_count` localStorage counter.
+  dailyQuestionCount: number;
+  // Always `false` for guests.
+  hasActiveSubscription: boolean;
+}
+
+// Thrown by `sendMessage` when `POST /lila/chat` responds 403 with `upgradeRequired: true` —
+// an authenticated user without an active subscription hit today's `freeQuestionLimit`. The
+// message was never sent/persisted server-side, so the caller should restore the user's draft
+// text and show the upgrade gate instead of a generic error.
+export class LilaUpgradeRequiredError extends Error {
+  freeQuestionLimit: number;
+
+  constructor(message: string, freeQuestionLimit: number) {
+    super(message);
+    this.name = "LilaUpgradeRequiredError";
+    this.freeQuestionLimit = freeQuestionLimit;
+  }
 }
 
 export interface MigrateGuestResponse {
@@ -178,7 +198,27 @@ export async function sendMessage(
           ? { ...jsonHeaders(), "x-guest-id": guestId }
           : jsonHeaders(),
       });
-  return handleResponse<ChatResponse>(res);
+
+  if (!res.ok) {
+    if (res.status === 403) {
+      const data = (await res.json().catch(() => null)) as {
+        message?: string;
+        freeQuestionLimit?: number;
+        upgradeRequired?: boolean;
+      } | null;
+      if (data?.upgradeRequired) {
+        throw new LilaUpgradeRequiredError(
+          data.message ?? "Daily free message limit reached",
+          data.freeQuestionLimit ?? 0,
+        );
+      }
+      throw new Error(`HTTP 403: ${JSON.stringify(data)}`);
+    }
+    const text = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+
+  return res.json() as Promise<ChatResponse>;
 }
 
 export async function getConversations(

@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Home, MessageCircle, Calendar, BookOpen, Sprout, UserCircle2 } from "lucide-react";
+import {
+  Menu,
+  X,
+  Home,
+  MessageCircle,
+  Calendar,
+  BookOpen,
+  Sprout,
+  UserCircle2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -11,11 +20,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Hoy", href: "/hoy", icon: Home },
+  { label: "Hoy", href: "/hoy", icon: Home, disabled: true },
   { label: "Chat", href: "/chat", icon: MessageCircle },
   { label: "Calendario", href: "/calendario", icon: Calendar },
   { label: "Diario", href: "#", icon: BookOpen, disabled: true },
-  { label: "Aprende", href: "/aprende", icon: Sprout },
+  { label: "Aprende", href: "/aprende", icon: Sprout, disabled: true },
   { label: "Perfil", href: "/perfil", icon: UserCircle2 },
 ];
 
@@ -59,7 +68,10 @@ function MobileNav() {
           />
           <div
             className="italic font-bold text-xl leading-none"
-            style={{ fontFamily: "'Playfair Display', serif", color: "#9B72C8" }}
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              color: "#9B72C8",
+            }}
           >
             Lila
           </div>
