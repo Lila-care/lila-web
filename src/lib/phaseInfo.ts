@@ -9,30 +9,50 @@ export interface PhaseInfo {
   gradient: string;
 }
 
+// Colores por fase alineados a los tokens de src/index.css (--color-phase-*, y las rampas
+// --plum-*/--forest-*/--coral-*/--orchid-* que los respaldan). dotColor usa el tono "firma" de
+// cada fase tal cual está definido en el token (plum-700/forest-700/coral-400/orchid-400) — se
+// usa en elementos chicos (punto de leyenda, ícono de luna, badge) donde no aplica el mínimo de
+// contraste de texto. gradient en cambio arranca/termina en un tramo más oscuro de la misma
+// rampa (700/600/500 o 700/600/400) para que el texto blanco fijo de PhaseHeroCard/
+// DayDetailPanel (`text-white` hardcodeado, no lee `textColor`) siga siendo legible — un
+// degradado pastel ahí dejaría el texto casi invisible (ver nota de NO_PHASE_INFO abajo, que ya
+// tuvo ese bug antes). Contraste (WCAG, texto blanco):
+//   plum-700 8.13:1 · plum-600 5.71:1 · plum-500 4.08:1
+//   forest-700 5.2:1 · forest-600 3.37:1 · forest-500 2.49:1
+//   coral-700 7.29:1 · coral-600 4.95:1 · coral-400 2.87:1
+//   orchid-700 8.4:1 · orchid-600 6.01:1 · orchid-400 2.98:1
+// El último stop de ovulatoria/lútea queda por debajo de 4.5:1 igual que en el degradado
+// anterior (su lightest stop tampoco pasaba AA) — no es una regresión, y textColor (usado en
+// MonthGrid sobre fondos casi blancos) sí cumple AA holgadamente en los 4 casos.
 export const PHASE_INFO: Record<PhaseName, PhaseInfo> = {
   MENSTRUATION: {
     label: "Fase menstrual",
-    dotColor: "#8B3A52",
-    textColor: "#8B3A52",
-    gradient: "linear-gradient(135deg, #8B3A52 0%, #a8506a 55%, #c47b8e 100%)",
+    dotColor: "var(--color-phase-menstrual)",
+    textColor: "var(--plum-800)",
+    gradient:
+      "linear-gradient(135deg, var(--color-phase-menstrual) 0%, var(--plum-600) 55%, var(--plum-500) 100%)",
   },
   FOLLICULAR: {
     label: "Fase folicular",
-    dotColor: "#B5C26A",
-    textColor: "#5f7231",
-    gradient: "linear-gradient(135deg, #B5C26A, #c7d189 60%, #dbe3ae)",
+    dotColor: "var(--color-phase-folicular)",
+    textColor: "var(--forest-800)",
+    gradient:
+      "linear-gradient(135deg, var(--color-phase-folicular), var(--forest-600) 60%, var(--forest-500))",
   },
   OVULATION: {
     label: "Fase ovulatoria",
-    dotColor: "#9B72C8",
-    textColor: "#6c4a91",
-    gradient: "linear-gradient(135deg, #9B72C8, #ab86d1 60%, #c4a8e0)",
+    dotColor: "var(--color-phase-ovulatoria)",
+    textColor: "var(--coral-700)",
+    gradient:
+      "linear-gradient(135deg, var(--coral-700), var(--coral-600) 60%, var(--color-phase-ovulatoria))",
   },
   LUTEAL: {
     label: "Fase lútea",
-    dotColor: "#F0C4A8",
-    textColor: "#a8683a",
-    gradient: "linear-gradient(135deg, #F0C4A8, #f2d3bd 60%, #f5e0d2)",
+    dotColor: "var(--color-phase-lutea)",
+    textColor: "var(--orchid-700)",
+    gradient:
+      "linear-gradient(135deg, var(--orchid-700), var(--orchid-600) 60%, var(--color-phase-lutea))",
   },
 };
 
