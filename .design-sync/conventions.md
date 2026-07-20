@@ -19,9 +19,11 @@ styles or ad-hoc hex colors.
 
 | Token role | Utility classes |
 |---|---|
-| Primary brand (deep magenta) | `bg-primary`, `text-primary-foreground`, `text-primary` |
-| Secondary (light lavender) | `bg-secondary`, `text-secondary-foreground` |
-| Accent (muted olive) | `bg-accent`, `text-accent-foreground` |
+| Primary brand (Royal Plum `#7e3565`) | `bg-primary`, `text-primary-foreground`, `text-primary` |
+| Secondary (Amethyst Smoke `#b793c6`) | `bg-secondary`, `text-secondary-foreground` |
+| Accent (Vanilla Custard `#f7f4ab`) | `bg-accent`, `text-accent-foreground` |
+| Success (Fern `#3a7d44`) | `bg-success`, `text-success-foreground` — `Badge variant="success"` |
+| Warning (Burnt Peach `#ec7357`) | `bg-warning`, `text-warning-foreground` — `Badge variant="warning"` |
 | Destructive (errors, delete) | `bg-destructive`, `text-destructive`, `border-destructive` |
 | Muted text | `text-muted-foreground` |
 | Card surface | `bg-card`, `text-card-foreground` |
