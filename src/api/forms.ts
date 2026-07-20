@@ -10,6 +10,7 @@ export interface FormQuestionConfig {
   type: "text" | "date" | "number" | "select";
   required?: boolean;
   options?: string[];
+  disallowFuture?: boolean;
 }
 
 export interface FormQuestion {

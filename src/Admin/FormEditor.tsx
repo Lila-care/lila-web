@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { ReactNode, useState } from "react";
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import {
   CreateFormPayload,
   CreateFormQuestionPayload,
@@ -7,6 +8,18 @@ import {
   UpdateFormPayload,
 } from "@/api/forms";
 import { FormQuestionBuilder } from "@/Admin/FormQuestionBuilder";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface FormEditorProps {
   initialForm?: LilaForm;
@@ -22,6 +35,11 @@ interface AdvancedAudienceState {
   queryRaw: string;
   queryError: string | null;
 }
+
+// Shared focus treatment mandated by the design spec for text fields in this editor:
+// change the border color too, not just the ring, so the active field is unambiguous.
+const FIELD_FOCUS_CLASSES =
+  "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary";
 
 function parseAudience(state: AdvancedAudienceState): {
   audience: FormAudience | undefined;
@@ -54,6 +72,21 @@ function parseAudience(state: AdvancedAudienceState): {
     },
     error: null,
   };
+}
+
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-6">
+      <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
+      {children}
+    </div>
+  );
 }
 
 export function FormEditor({
@@ -108,84 +141,97 @@ export function FormEditor({
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-5 max-w-2xl"
+      className="max-w-3xl space-y-6"
       data-testid="form-editor"
     >
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nombre
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          data-testid="form-name"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Descripción
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-y"
-          data-testid="form-description"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Objetivo
-        </label>
-        <input
-          type="text"
-          value={objective}
-          onChange={(e) => setObjective(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          data-testid="form-objective"
-        />
-      </div>
-
-      {!isEditing && (
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={isDefault}
-            onChange={(e) => setIsDefault(e.target.checked)}
-            data-testid="form-is-default"
+      <SectionCard title="Información general">
+        <div className="space-y-1">
+          <Label htmlFor="form-name">Nombre</Label>
+          <Input
+            id="form-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className={FIELD_FOCUS_CLASSES}
+            data-testid="form-name"
           />
-          Marcar como form por defecto
-        </label>
-      )}
+        </div>
 
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Preguntas</h3>
+        <div className="space-y-1">
+          <Label htmlFor="form-description">Descripción</Label>
+          <Textarea
+            id="form-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            className={cn("resize-y", FIELD_FOCUS_CLASSES)}
+            data-testid="form-description"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="form-objective">Objetivo</Label>
+          <Input
+            id="form-objective"
+            type="text"
+            value={objective}
+            onChange={(e) => setObjective(e.target.value)}
+            className={FIELD_FOCUS_CLASSES}
+            data-testid="form-objective"
+          />
+        </div>
+
+        {!isEditing && (
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="form-is-default"
+                checked={isDefault}
+                onCheckedChange={(checked) => setIsDefault(checked === true)}
+                data-testid="form-is-default"
+              />
+              <Label htmlFor="form-is-default" className="font-normal">
+                Marcar como form por defecto
+              </Label>
+            </div>
+            <p className="pl-6 text-xs text-neutral-500">
+              Este form se le va a mostrar automáticamente a las usuarias nuevas
+              al loguearse.
+            </p>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Preguntas">
         <FormQuestionBuilder questions={questions} onChange={setQuestions} />
-      </div>
+      </SectionCard>
 
       {isEditing && (
-        <div className="border-t pt-4">
-          <button
-            type="button"
-            onClick={() => setShowAdvanced((v) => !v)}
-            className="text-sm font-medium text-gray-600 hover:underline"
-            data-testid="audience-toggle"
-          >
-            {showAdvanced ? "Ocultar" : "Mostrar"} audiencia (avanzado)
-          </button>
+        <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+          <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-6">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1 text-sm font-medium text-neutral-600 hover:text-neutral-900"
+                data-testid="audience-toggle"
+              >
+                Audiencia (avanzado)
+                {showAdvanced ? (
+                  <ChevronUp className="size-4" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="size-4" aria-hidden="true" />
+                )}
+              </button>
+            </CollapsibleTrigger>
 
-          {showAdvanced && (
-            <div className="mt-3 space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+            <CollapsibleContent className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="audience-user-ids">
                   IDs de usuario (separados por coma)
-                </label>
-                <textarea
+                </Label>
+                <Textarea
+                  id="audience-user-ids"
                   value={audienceState.userIdsRaw}
                   onChange={(e) =>
                     setAudienceState((prev) => ({
@@ -194,15 +240,14 @@ export function FormEditor({
                     }))
                   }
                   rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="font-mono"
                   data-testid="audience-user-ids"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Query (JSON crudo)
-                </label>
-                <textarea
+              <div className="space-y-1">
+                <Label htmlFor="audience-query">Query (JSON crudo)</Label>
+                <Textarea
+                  id="audience-query"
                   value={audienceState.queryRaw}
                   onChange={(e) =>
                     setAudienceState((prev) => ({
@@ -212,50 +257,50 @@ export function FormEditor({
                   }
                   rows={4}
                   placeholder='{ "tier": "clinico" }'
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="font-mono"
                   data-testid="audience-query"
                 />
               </div>
               {audienceState.queryError && (
                 <p
-                  className="text-red-600 text-sm"
+                  className="rounded-r-lg border-l-4 border-red-500 bg-red-50 px-3 py-2 text-sm text-red-700"
                   data-testid="audience-query-error"
                 >
                   {audienceState.queryError}
                 </p>
               )}
-            </div>
-          )}
-        </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
       )}
 
       {saveError && (
-        <p className="text-red-600 text-sm" data-testid="form-save-error">
-          {saveError}
-        </p>
+        <Alert variant="destructive" role="alert" aria-live="polite">
+          <AlertDescription data-testid="form-save-error">
+            {saveError}
+          </AlertDescription>
+        </Alert>
       )}
 
       <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-primary text-white rounded-lg px-6 py-2.5 font-medium hover:opacity-90 transition disabled:opacity-50"
-          data-testid="form-save-button"
-        >
+        <Button type="submit" disabled={saving} data-testid="form-save-button">
+          {saving && (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          )}
           {saving
             ? "Guardando..."
             : isEditing
               ? "Guardar cambios"
               : "Crear borrador"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
           onClick={onCancel}
-          className="rounded-lg px-6 py-2.5 font-medium text-gray-600 hover:bg-gray-100 transition"
           data-testid="form-cancel-button"
         >
           Cancelar
-        </button>
+        </Button>
       </div>
     </form>
   );
