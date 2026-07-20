@@ -21,9 +21,9 @@ styles or ad-hoc hex colors.
 |---|---|
 | Primary brand (Royal Plum `#7e3565`) | `bg-primary`, `text-primary-foreground`, `text-primary` |
 | Secondary (Amethyst Smoke `#b793c6`) | `bg-secondary`, `text-secondary-foreground` |
-| Accent (Vanilla Custard `#f7f4ab`) | `bg-accent`, `text-accent-foreground` |
+| Accent (Orchid `#AF87C0`) | `bg-accent`, `text-accent-foreground` |
 | Success (Fern `#3a7d44`) | `bg-success`, `text-success-foreground` — `Badge variant="success"` |
-| Warning (Burnt Peach `#ec7357`) | `bg-warning`, `text-warning-foreground` — `Badge variant="warning"` |
+| Warning (Coral `#E85331`) | `bg-warning`, `text-warning-foreground` — `Badge variant="warning"` |
 | Destructive (errors, delete) | `bg-destructive`, `text-destructive`, `border-destructive` |
 | Muted text | `text-muted-foreground` |
 | Card surface | `bg-card`, `text-card-foreground` |
@@ -38,8 +38,11 @@ Semantic names only — never hardcode hex values; every color above is themeabl
 `_ds_bundle.css` (the compiled Tailwind output) before styling anything new. Each component's
 `.prompt.md` documents its own props from the real TypeScript source.
 
-**Fonts.** Body/UI text loads "DM Sans" and "Poppins" from Google Fonts at runtime (not a
-shipped `@font-face`) — assume they're available the same way in anything you build.
+**Fonts.** Body/UI text loads "Poppins" from Google Fonts at runtime (not a shipped
+`@font-face`) via `var(--font-family-base)` — assume it's available the same way in anything
+you build. Headings use "Playfair Display" instead, set inline per-component (no token).
+"DM Sans" is still requested by the same `<link>` tag but no longer referenced by any
+component — vestigial, not part of the active type system.
 
 **Idiomatic snippet** (real composition, adapted from this sync's Card preview):
 

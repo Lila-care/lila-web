@@ -100,6 +100,29 @@ exposes) — resolved immediately and anchors correctly below the trigger.
 - `Checkbox` and `Collapsible` previews visually show the unlayered-`button{}` bug above — this
   is the CURRENT real rendering, not a preview defect. Re-check after that bug is fixed upstream.
 
+## 2026-07-20 re-sync — token/font update
+
+`src/index.css` got a substantial token pass this session: full 50–900 color ramps (plum,
+orchid, cream, forest, coral), elevation shadows, spacing scale, `--radius-pill`, and a
+typography scale. Two pre-existing shadcn semantic tokens were repointed (user's explicit
+choice) rather than left alone:
+- `--accent` (was `#f7f4ab` Vanilla Custard) → `var(--orchid-400)` `#AF87C0`.
+- `--warning` (was `#ec7357` Burnt Peach) → `var(--coral-500)` `#E85331`; `--warning-foreground`
+  stays dark text (`oklch(0.205 0 0)`) — coral-500 only hits 3.68:1 contrast with white text
+  (fails WCAG AA) vs 5.39:1 with dark text (verified via a manual contrast calc, not shipped
+  tooling).
+- Body/`:root` font-family switched from `"DM Sans"`/`Inter` to `var(--font-family-base)`
+  (`'Poppins', sans-serif`) — also the user's explicit choice. `conventions.md`'s Accent/Warning
+  hex annotations and Fonts line were stale after this and have been corrected in place (no
+  class/prop names changed, just the documented hex values and font list — see the diff in this
+  sync). No component `.tsx` changed, so all 15 `sourceKeys` stayed identical — this was a
+  styling-only re-sync (`upload: {components: [], styling: true}`).
+- The new ramp/spacing/shadow/typography tokens (`--plum-*`, `--space-*`, `--shadow-*`,
+  `--font-size-*`, `--font-weight-*`, `--radius-pill`, `--color-phase-*`, etc.) are NOT wired to
+  any Tailwind utility class yet — they exist as raw CSS custom properties only. Nothing in
+  `conventions.md`'s utility table references them since no component consumes them yet. If a
+  future sync adds Tailwind `@theme` mappings for these, revisit the conventions table.
+
 ## Re-sync risks
 
 - **`dist/styles.css` goes stale silently.** It's a manual copy of Vite's content-hashed build
