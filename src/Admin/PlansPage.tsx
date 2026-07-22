@@ -96,6 +96,7 @@ function PlansPage() {
             </div>
             {view.kind === "list" && (
               <Button
+                variant="cta"
                 onClick={() => setView({ kind: "create" })}
                 data-testid="plans-create-button"
               >

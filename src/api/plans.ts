@@ -14,6 +14,8 @@ export interface PlanDto {
   intervalDays: number;
   status: PlanStatus;
   description?: string;
+  // `null` = unlimited daily interactions.
+  maxInteractionsPerDay: number | null;
 }
 
 export interface CreatePlanPayload {
@@ -22,6 +24,7 @@ export interface CreatePlanPayload {
   currency: "COP";
   intervalDays: number;
   description?: string;
+  maxInteractionsPerDay?: number | null;
 }
 
 export interface UpdatePlanPayload {
@@ -29,6 +32,7 @@ export interface UpdatePlanPayload {
   amountInCents?: number;
   status?: PlanStatus;
   description?: string;
+  maxInteractionsPerDay?: number | null;
 }
 
 // --- Helpers ---

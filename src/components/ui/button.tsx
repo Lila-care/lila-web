@@ -19,6 +19,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        cta: "rounded-xl bg-[var(--color-cta)] font-semibold text-[var(--color-cta-foreground)] hover:bg-[var(--color-cta-hover)]",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -31,6 +32,19 @@ const buttonVariants = cva(
         "icon-lg": "size-10",
       },
     },
+    compoundVariants: [
+      // el tamaño "default" (h-9 px-4) gana sobre las clases de variant en el merge de
+      // tailwind-merge (size se resuelve después que variant) — este compound es lo que
+      // hace que "cta" tenga sus propias proporciones (44px, más padding) sin necesitar
+      // que cada caller pase size="lg". has-[>svg]:px-6 pisa el has-[>svg]:px-3 del size
+      // default (:has() tiene más especificidad que una clase plana — px-6 solo no alcanza
+      // cuando el botón lleva ícono, como el de referencia).
+      {
+        variant: "cta",
+        size: "default",
+        class: "h-11 px-6 has-[>svg]:px-6",
+      },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

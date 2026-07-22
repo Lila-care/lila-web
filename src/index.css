@@ -109,6 +109,12 @@
 
   --color-danger:           #C7401F;           /* fuera de paleta, uso puntual */
 
+  /* CTA Lila — orchid-400 para CTAs de landing/marketing, diferenciado del
+     --color-brand (plum-700) del panel admin. */
+  --color-cta:              var(--orchid-400);  /* #AF87C0 */
+  --color-cta-hover:        var(--orchid-500);  /* #9B69B0 */
+  --color-cta-foreground:   var(--cream-50);    /* #FCFBF3 — texto claro sobre orchid */
+
   /* Fases del ciclo — el elemento firma del sistema */
   --color-phase-menstrual:  var(--plum-700);
   --color-phase-folicular:  var(--forest-700);
@@ -231,22 +237,30 @@ body {
   font-family: var(--font-family-base);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #d8d9b1;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* @layer base (no unlayered, como en la plantilla original de Vite): sin esto, estas
+   reglas siempre le ganan a las utilidades de Tailwind (rounded, font-weight, padding)
+   sobre button, sin importar el orden en el que aparezcan — la cascada de layers
+   prioriza cualquier utilidad layered sobre una declaración unlayered. Ver
+   .design-sync/NOTES.md, "Real app bug found": esto rompía Checkbox/Collapsible y,
+   antes de este fix, también el tamaño/radius/peso reales del Button variant cta. */
+@layer base {
+  button {
+    border-radius: 8px;
+    border: 1px solid transparent;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.25s;
+  }
+  button:hover {
+    border-color: #d8d9b1;
+  }
+  button:focus,
+  button:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+  }
 }
 
 @media (prefers-color-scheme: light) {

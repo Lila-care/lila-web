@@ -52,7 +52,13 @@ Served `ds-bundle/` with `.ds-sync/storybook/http-serve.mjs` and opened each
 rendering correctly (real brand colors/fonts, correct layout) except two pre-existing app bugs
 (below, unrelated to design-sync authoring — do not "fix" by hacking the preview).
 
-### Real app bug found: unlayered vestigial `button{}` rule breaks small button-based controls
+### FIXED 2026-07-20: unlayered vestigial `button{}` rule breaks small button-based controls
+
+Wrapped in `@layer base` (`src/index.css`) while building the `Button` `cta` variant — that
+variant's `rounded-xl`/`font-semibold`/custom padding were themselves getting clobbered by this
+rule, which forced the fix from "flagged, not fixed" to "in scope." Checkbox/Collapsible previews
+below **have not been re-verified against the new rendering yet** — do that before the next
+design-sync re-sync. The original finding is kept below for context.
 
 `src/index.css` has a leftover Vite-template block (`body{}`, `button{border-radius:8px;
 padding:.6em 1.2em;...}`, the `@media (prefers-color-scheme: light)` block) that sits

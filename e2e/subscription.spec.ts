@@ -230,6 +230,8 @@ test.describe("Admin — Planes (CRUD)", () => {
     await seedAuthToken(page, "admin-e2e");
 
     let plans: (typeof DRAFT_PLAN)[] = [];
+    let createBody: Record<string, unknown> | null = null;
+    let updateBody: Record<string, unknown> | null = null;
 
     await page.route(`${API_URL}/admin/subscription/plans`, async (route) => {
       if (route.request().method() === "GET") {
@@ -237,8 +239,8 @@ test.describe("Admin — Planes (CRUD)", () => {
         return;
       }
       if (route.request().method() === "POST") {
-        const body = route.request().postDataJSON();
-        const created = { ...DRAFT_PLAN, ...body };
+        createBody = route.request().postDataJSON();
+        const created = { ...DRAFT_PLAN, ...createBody };
         plans = [created];
         await fulfillJson(route, created, 201);
         return;
@@ -249,8 +251,8 @@ test.describe("Admin — Planes (CRUD)", () => {
     await page.route(
       `${API_URL}/admin/subscription/plans/${DRAFT_PLAN.planId}`,
       async (route) => {
-        const body = route.request().postDataJSON();
-        const updated = { ...plans[0], ...body };
+        updateBody = route.request().postDataJSON();
+        const updated = { ...plans[0], ...updateBody };
         plans = [updated];
         await fulfillJson(route, updated);
       },
@@ -267,6 +269,7 @@ test.describe("Admin — Planes (CRUD)", () => {
     await page.getByTestId("plan-amount").fill("19900");
     await page.getByTestId("plan-interval").fill("30");
     await page.getByTestId("plan-description").fill("Acceso ilimitado a Lila");
+    await page.getByTestId("plan-max-interactions").fill("50");
     await page.getByTestId("plan-save-button").click();
 
     await expect(page.getByTestId("plan-row")).toHaveCount(1);
@@ -274,17 +277,22 @@ test.describe("Admin — Planes (CRUD)", () => {
       "data-status",
       "active",
     );
+    expect(createBody).toMatchObject({ maxInteractionsPerDay: 50 });
 
     // --- Edit ---
     await page.getByTestId("plan-row").click();
     await expect(page.getByTestId("plan-detail")).toBeVisible();
+    await expect(page.getByTestId("plan-max-interactions")).toHaveValue("50");
 
     await page.getByTestId("plan-active").click();
+    // Clearing the field means unlimited daily interactions (`null`), not zero.
+    await page.getByTestId("plan-max-interactions").fill("");
     await page.getByTestId("plan-save-button").click();
 
     await expect(
       page.getByTestId("plan-detail").getByTestId("plan-status-badge"),
     ).toHaveAttribute("data-status", "inactive");
+    expect(updateBody).toMatchObject({ maxInteractionsPerDay: null });
   });
 });
 

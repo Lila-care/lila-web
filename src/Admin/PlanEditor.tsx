@@ -65,10 +65,21 @@ export function PlanEditor({
   const [status, setStatus] = useState<PlanStatus>(
     initialPlan?.status ?? "active",
   );
+  // Empty string means unlimited (`null`) — mirrors `amountPesos`'s string-field pattern so a
+  // partial in-progress input isn't mangled, and so "unlimited" isn't confused with "0".
+  const [maxInteractionsPerDay, setMaxInteractionsPerDay] = useState(
+    initialPlan?.maxInteractionsPerDay != null
+      ? String(initialPlan.maxInteractionsPerDay)
+      : "",
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const amountInCents = Math.round(parseFloat(amountPesos || "0") * 100);
+    const parsedMaxInteractionsPerDay =
+      maxInteractionsPerDay.trim() === ""
+        ? null
+        : parseInt(maxInteractionsPerDay, 10);
 
     if (isEditing) {
       onUpdate({
@@ -76,6 +87,7 @@ export function PlanEditor({
         amountInCents,
         status,
         description: description || undefined,
+        maxInteractionsPerDay: parsedMaxInteractionsPerDay,
       });
       return;
     }
@@ -86,6 +98,7 @@ export function PlanEditor({
       currency: "COP",
       intervalDays: parseInt(intervalDays, 10) || 0,
       description: description || undefined,
+      maxInteractionsPerDay: parsedMaxInteractionsPerDay,
     });
   };
 
@@ -151,6 +164,26 @@ export function PlanEditor({
             className={FIELD_FOCUS_CLASSES}
             data-testid="plan-description"
           />
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="plan-max-interactions">
+            Interacciones diarias máximas
+          </Label>
+          <Input
+            id="plan-max-interactions"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Ilimitado"
+            value={maxInteractionsPerDay}
+            onChange={(e) => setMaxInteractionsPerDay(e.target.value)}
+            className={FIELD_FOCUS_CLASSES}
+            data-testid="plan-max-interactions"
+          />
+          <p className="text-xs text-neutral-500">
+            Dejá vacío para interacciones ilimitadas.
+          </p>
         </div>
 
         {isEditing && (
