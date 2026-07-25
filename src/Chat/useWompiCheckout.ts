@@ -1,27 +1,28 @@
 import { useCallback, useState } from "react";
+import { getCheckoutSignature } from "@/api/subscription";
 
 // --- Wompi Widget Checkout types ---
 //
-// NOTE (pending real Wompi credentials): `VITE_WOMPI_PUBLIC_KEY` is an empty placeholder in
-// `.env.example` — there are no sandbox/production keys yet, so this hook has never been
-// exercised end-to-end against a real Wompi environment. It is implemented per Wompi's
-// documented `WidgetCheckout` API (script tag + config object + `.open(callback)`), but the
-// exact shape of `result.transaction` — in particular whether a `paymentSourceId` for
-// recurring charges comes back directly on it, vs. requiring a separate tokenization/payment
-// sources call — needs to be verified once real keys are available. Do not block the rest of
-// the subscription feature on this; report it as a follow-up item.
+// NOTE on `result.transaction`: the exact shape returned by the callback — in particular
+// whether a `paymentSourceId` for recurring charges comes back directly on it, vs. requiring
+// a separate tokenization/payment sources call — needs to be verified end-to-end with a real
+// Wompi transaction. Do not block the rest of the subscription feature on this.
 interface WompiWidgetConfig {
   currency: string;
   amountInCents: number;
   reference: string;
   publicKey: string;
+  // Wompi's WidgetCheckout uses "signature:integrity" (not "signature") for the SHA256
+  // integrity hash. Passing it under "signature" triggers "La firma es inválida" because
+  // the widget treats them as two distinct fields with different validators.
+  "signature:integrity": string;
   redirectUrl?: string;
 }
 
 interface WompiWidgetTransactionResult {
   id?: string;
   status?: string;
-  paymentSourceId?: string;
+  paymentSourceId?: string | null;
 }
 
 interface WompiWidgetResult {
@@ -42,8 +43,7 @@ declare global {
 
 const WOMPI_SCRIPT_URL = "https://checkout.wompi.co/widget.js";
 const WOMPI_PUBLIC_KEY = import.meta.env.VITE_WOMPI_PUBLIC_KEY as
-  | string
-  | undefined;
+  string | undefined;
 
 let scriptLoadingPromise: Promise<void> | null = null;
 
@@ -71,12 +71,22 @@ interface OpenCheckoutParams {
   reference: string;
 }
 
+export interface WompiCheckoutResult {
+  transactionId: string;
+  status: string;
+  // Null for Nequi and other non-tokenizable methods. Only set for card
+  // payments that support recurring charges.
+  paymentSourceId: string | null;
+}
+
 interface UseWompiCheckoutReturn {
   isOpening: boolean;
   error: string | null;
-  // Resolves the `paymentSourceId` on success, or `null` if the widget isn't configured, the
-  // user closed it, or it failed (see `error` in that case).
-  openCheckout: (params: OpenCheckoutParams) => Promise<string | null>;
+  // Resolves with the transaction result on widget close, or `null` if the
+  // widget wasn't configured, the user closed it without paying, or it failed.
+  openCheckout: (
+    params: OpenCheckoutParams,
+  ) => Promise<WompiCheckoutResult | null>;
 }
 
 export function useWompiCheckout(): UseWompiCheckoutReturn {
@@ -84,7 +94,7 @@ export function useWompiCheckout(): UseWompiCheckoutReturn {
   const [error, setError] = useState<string | null>(null);
 
   const openCheckout = useCallback(
-    async (params: OpenCheckoutParams): Promise<string | null> => {
+    async (params: OpenCheckoutParams): Promise<WompiCheckoutResult | null> => {
       if (!WOMPI_PUBLIC_KEY) {
         setError(
           "Los pagos todavía no están configurados (falta VITE_WOMPI_PUBLIC_KEY).",
@@ -100,23 +110,42 @@ export function useWompiCheckout(): UseWompiCheckoutReturn {
           throw new Error("El widget de pagos no está disponible");
         }
 
-        return await new Promise<string | null>((resolve) => {
+        const { signature } = await getCheckoutSignature(
+          params.reference,
+          params.amountInCents,
+        );
+
+        return await new Promise<WompiCheckoutResult | null>((resolve) => {
           const checkout = new window.WidgetCheckout!({
             currency: "COP",
             amountInCents: params.amountInCents,
             reference: params.reference,
             publicKey: WOMPI_PUBLIC_KEY,
+            "signature:integrity": signature,
           });
           checkout.open((result) => {
-            resolve(result.transaction?.paymentSourceId ?? null);
+            if (!result.transaction?.id) {
+              // Widget closed without completing a transaction
+              resolve(null);
+              return;
+            }
+            resolve({
+              transactionId: result.transaction.id,
+              status: result.transaction.status ?? "UNKNOWN",
+              paymentSourceId: result.transaction.paymentSourceId ?? null,
+            });
           });
         });
       } catch (err) {
-        setError(
+        // Wompi's widget.js throws plain strings (e.g. "Wompi Widget Error:\nLa firma es inválida")
+        // instead of Error instances — surface the actual message so it's actionable in dev.
+        const message =
           err instanceof Error
             ? err.message
-            : "Error al abrir el widget de pagos",
-        );
+            : typeof err === "string"
+              ? err
+              : "Error al abrir el widget de pagos";
+        setError(message);
         return null;
       } finally {
         setIsOpening(false);

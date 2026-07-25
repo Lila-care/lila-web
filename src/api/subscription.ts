@@ -41,6 +41,10 @@ export interface GetSubscriptionResponse {
   subscription: SubscriptionDto;
 }
 
+export interface CheckoutSignatureResponse {
+  signature: string;
+}
+
 // --- Helpers ---
 
 function authHeaders(token: string) {
@@ -99,4 +103,39 @@ export async function cancelSubscription(
     headers: authHeaders(token),
   });
   return handleResponse<GetSubscriptionResponse>(res);
+}
+
+// Called after the Wompi WidgetCheckout shows "¡Pago aprobado!".
+// The widget already charged the user — the backend only verifies and activates.
+export interface ConfirmWidgetPaymentPayload {
+  transactionId: string;
+  planId: string;
+}
+
+export async function confirmWidgetPayment(
+  token: string,
+  payload: ConfirmWidgetPaymentPayload,
+): Promise<CheckoutResponse> {
+  const res = await authFetch(
+    `${BASE_URL}/subscription/confirm-widget-payment`,
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(payload),
+    },
+  );
+  return handleResponse<CheckoutResponse>(res);
+}
+
+// Public endpoint — no auth header required.
+// Fetches the SHA256 integrity signature required by the Wompi WidgetCheckout.
+export async function getCheckoutSignature(
+  reference: string,
+  amountInCents: number,
+): Promise<CheckoutSignatureResponse> {
+  const url = `${BASE_URL}/subscription/checkout-signature?reference=${encodeURIComponent(reference)}&amountInCents=${amountInCents}`;
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse<CheckoutSignatureResponse>(res);
 }
