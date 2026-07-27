@@ -1,0 +1,53 @@
+name: Deploy Staging (label)
+
+concurrency:
+  group: deploy-staging-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types: [labeled]
+    branches: ["**"]
+
+jobs:
+  alias-staging:
+    if: github.event.label.name == 'staging'
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Wait for Vercel preview deployment to be ready
+        id: deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          for attempt in $(seq 1 20); do
+            RESPONSE=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_ORG_ID&target=preview&limit=20")
+
+            URL=$(echo "$RESPONSE" | jq -r --arg branch "$PR_BRANCH" \
+              '[.deployments[] | select(.meta.githubCommitRef == $branch) | select(.state == "READY")] | sort_by(.created) | last | .url')
+
+            if [ -n "$URL" ] && [ "$URL" != "null" ]; then
+              echo "url=$URL" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "Preview not ready yet for branch $PR_BRANCH (attempt $attempt/20), retrying in 15s..."
+            sleep 15
+          done
+
+          echo "Timed out waiting for a READY preview deployment on branch $PR_BRANCH" >&2
+          exit 1
+
+      - name: Alias preview to staging domain
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          STAGING_ALIAS: ${{ secrets.VERCEL_STAGING_ALIAS }}
+        run: |
+          npx --yes vercel@latest alias set "${{ steps.deployment.outputs.url }}" "$STAGING_ALIAS" \
+            --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
