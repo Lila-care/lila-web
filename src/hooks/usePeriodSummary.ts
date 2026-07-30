@@ -9,9 +9,9 @@ interface UsePeriodSummaryReturn {
   refetch: () => void;
 }
 
-// Fetch compartido de GET /period/summary — extraído de usePerfil.ts para que Calendario
-// (ResumenPerfilCard) pueda reusar el mismo patrón de loading/error/cleanup sin duplicar el
-// useEffect. usePerfil.ts sigue siendo dueño de su propio estado de `saving`/`saveCycleInfo`,
+// Fetch compartido de GET /period/summary — extraído de useProfile.ts para que Calendar
+// (CycleSummaryCard) pueda reusar el mismo patrón de loading/error/cleanup sin duplicar el
+// useEffect. useProfile.ts sigue siendo dueño de su propio estado de `saving`/`saveCycleInfo`,
 // que no depende de este hook.
 export function usePeriodSummary(): UsePeriodSummaryReturn {
   const { token } = useAuth();
@@ -20,7 +20,7 @@ export function usePeriodSummary(): UsePeriodSummaryReturn {
   const [error, setError] = useState<string | null>(null);
   // Incrementar este contador fuerza al useEffect de abajo a correr de nuevo sin depender de
   // un cambio real de `token` — es lo que usa `refetch` (ej. botón "Reintentar" en el estado
-  // de error de ResumenPerfilCard).
+  // de error de CycleSummaryCard).
   const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {

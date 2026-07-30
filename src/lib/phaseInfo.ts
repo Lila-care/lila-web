@@ -1,6 +1,6 @@
 import type { PhaseName } from "@/api/cycleTracking";
 
-// Copy y colores compartidos por fase — usado en Hoy, Calendario y Aprende para no duplicar
+// Copy y colores compartidos por fase — usado en Today, Calendar y Learn para no duplicar
 // el mismo mapping de PhaseName -> presentación en cada pantalla.
 export interface PhaseInfo {
   label: string;
@@ -35,24 +35,24 @@ export const PHASE_INFO: Record<PhaseName, PhaseInfo> = {
   },
   FOLLICULAR: {
     label: "Fase folicular",
-    dotColor: "var(--color-phase-folicular)",
+    dotColor: "var(--color-phase-follicular)",
     textColor: "var(--forest-800)",
     gradient:
-      "linear-gradient(135deg, var(--color-phase-folicular), var(--forest-600) 60%, var(--forest-500))",
+      "linear-gradient(135deg, var(--color-phase-follicular), var(--forest-600) 60%, var(--forest-500))",
   },
   OVULATION: {
     label: "Fase ovulatoria",
-    dotColor: "var(--color-phase-ovulatoria)",
+    dotColor: "var(--color-phase-ovulatory)",
     textColor: "var(--coral-700)",
     gradient:
-      "linear-gradient(135deg, var(--coral-700), var(--coral-600) 60%, var(--color-phase-ovulatoria))",
+      "linear-gradient(135deg, var(--coral-700), var(--coral-600) 60%, var(--color-phase-ovulatory))",
   },
   LUTEAL: {
     label: "Fase lútea",
-    dotColor: "var(--color-phase-lutea)",
+    dotColor: "var(--color-phase-luteal)",
     textColor: "var(--orchid-700)",
     gradient:
-      "linear-gradient(135deg, var(--orchid-700), var(--orchid-600) 60%, var(--color-phase-lutea))",
+      "linear-gradient(135deg, var(--orchid-700), var(--orchid-600) 60%, var(--color-phase-luteal))",
   },
 };
 

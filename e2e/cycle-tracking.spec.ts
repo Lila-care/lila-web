@@ -148,15 +148,15 @@ test.describe("Cycle tracking — navegación por sidebar", () => {
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/hoy`);
-    await expect(page.getByTestId("nav-item-hoy")).toBeVisible();
+    await page.goto(`${BASE_URL}/today`);
+    await expect(page.getByTestId("nav-item-today")).toBeVisible();
 
     const routes: Array<{ href: string; navTestId: string }> = [
       { href: "/chat", navTestId: "nav-item-chat" },
-      { href: "/calendario", navTestId: "nav-item-calendario" },
-      { href: "/aprende", navTestId: "nav-item-aprende" },
-      { href: "/perfil", navTestId: "nav-item-perfil" },
-      { href: "/hoy", navTestId: "nav-item-hoy" },
+      { href: "/calendar", navTestId: "nav-item-calendar" },
+      { href: "/learn", navTestId: "nav-item-learn" },
+      { href: "/profile", navTestId: "nav-item-profile" },
+      { href: "/today", navTestId: "nav-item-today" },
     ];
 
     for (const { href, navTestId } of routes) {
@@ -175,18 +175,18 @@ test.describe("Cycle tracking — navegación por sidebar", () => {
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/hoy`);
+    await page.goto(`${BASE_URL}/today`);
 
     const diario = page.getByTestId("nav-item-diario");
     await expect(diario).toBeVisible();
     await expect(diario).toHaveAttribute("aria-disabled", "true");
     await diario.click({ force: true });
-    // No navegó — seguimos en /hoy.
-    await expect(page).toHaveURL(`${BASE_URL}/hoy`);
+    // No navegó — seguimos en /today.
+    await expect(page).toHaveURL(`${BASE_URL}/today`);
   });
 });
 
-test.describe("/hoy", () => {
+test.describe("/today", () => {
   test("muestra el día y la fase del ciclo con datos mockeados", async ({
     page,
   }) => {
@@ -194,7 +194,7 @@ test.describe("/hoy", () => {
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/hoy`);
+    await page.goto(`${BASE_URL}/today`);
 
     await expect(page.getByTestId("phase-hero-card")).toBeVisible();
     await expect(page.getByTestId("phase-hero-cycle-day")).toContainText(
@@ -217,7 +217,7 @@ test.describe("/hoy", () => {
       return route.abort();
     });
 
-    await page.goto(`${BASE_URL}/hoy`);
+    await page.goto(`${BASE_URL}/today`);
 
     const button = page.getByTestId("quick-action-symptoms");
     await expect(button).toBeDisabled();
@@ -227,7 +227,7 @@ test.describe("/hoy", () => {
 
   // Cubre la migración del widget de luna de PhaseHeroCard (cálculo sinódico client-side,
   // src/lib/moonPhase.ts, ya eliminado) a datos reales de GET /moon-phase/range — a diferencia
-  // de useCalendario (rango del mes completo), acá se pide un rango de un solo día (start=end=hoy).
+  // de useCalendar (rango del mes completo), acá se pide un rango de un solo día (start=end=hoy).
   test("el widget de luna pide el rango de un solo día (hoy) y muestra el dato real de /moon-phase/range", async ({
     page,
   }) => {
@@ -244,7 +244,7 @@ test.describe("/hoy", () => {
     });
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/hoy`);
+    await page.goto(`${BASE_URL}/today`);
     await page.waitForLoadState("networkidle");
 
     expect(requestedRanges.length).toBeGreaterThanOrEqual(1);
@@ -268,7 +268,7 @@ test.describe("/hoy", () => {
     await page.route(`${API_URL}/moon-phase/range*`, (route) => route.abort());
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/hoy`);
+    await page.goto(`${BASE_URL}/today`);
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByTestId("phase-hero-card")).toBeVisible();
@@ -277,11 +277,11 @@ test.describe("/hoy", () => {
     );
     await expect(page.getByTestId("moon-phase-widget")).toHaveCount(0);
     await expect(page.getByTestId("moon-phase-widget-loading")).toHaveCount(0);
-    await expect(page.getByTestId("hoy-error")).toHaveCount(0);
+    await expect(page.getByTestId("today-error")).toHaveCount(0);
   });
 });
 
-test.describe("/calendario", () => {
+test.describe("/calendar", () => {
   test("muestra la grilla del mes y el panel de detalle del día actual", async ({
     page,
   }) => {
@@ -289,7 +289,7 @@ test.describe("/calendario", () => {
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
 
     await expect(page.getByTestId("month-grid")).toBeVisible();
     const dayCells = page.getByTestId("calendar-day-cell");
@@ -310,7 +310,7 @@ test.describe("/calendario", () => {
       return route.abort();
     });
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
 
     const button = page.getByTestId("add-record-button");
     await expect(button).toBeDisabled();
@@ -325,26 +325,26 @@ test.describe("/calendario", () => {
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
 
     // "Ambos" es el default — leyenda de fases y bloque de luna visibles.
-    await expect(page.getByTestId("view-mode-ambos")).toBeVisible();
+    await expect(page.getByTestId("view-mode-both")).toBeVisible();
     await expect(page.getByTestId("phase-legend")).toBeVisible();
     await expect(page.getByTestId("day-detail-moon-block")).toBeVisible();
 
     // "Ciclo" — mantiene la leyenda de fases, oculta el bloque de luna del panel de detalle.
-    await page.getByTestId("view-mode-ciclo").click();
+    await page.getByTestId("view-mode-cycle").click();
     await expect(page.getByTestId("phase-legend")).toBeVisible();
     await expect(page.getByTestId("day-detail-moon-block")).toHaveCount(0);
     await expect(page.getByTestId("day-detail-panel")).toBeVisible();
 
     // "Luna" — oculta la leyenda de fases; el panel de detalle muestra la fase lunar, no la de ciclo.
-    await page.getByTestId("view-mode-luna").click();
+    await page.getByTestId("view-mode-moon").click();
     await expect(page.getByTestId("phase-legend")).toHaveCount(0);
     await expect(page.getByTestId("day-detail-moon-block")).toBeVisible();
 
     // Vuelve a "Ambos" — todo reaparece.
-    await page.getByTestId("view-mode-ambos").click();
+    await page.getByTestId("view-mode-both").click();
     await expect(page.getByTestId("phase-legend")).toBeVisible();
     await expect(page.getByTestId("day-detail-moon-block")).toBeVisible();
   });
@@ -362,7 +362,7 @@ test.describe("/calendario", () => {
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
     await page.waitForLoadState("networkidle");
 
     // weekMetricsBody marca los días de índice 5 y 6 (viernes/sábado) de cada semana devuelta
@@ -402,9 +402,9 @@ test.describe("/calendario", () => {
 
   // Pulido menor pedido junto al fix de contraste: una celda "hoy" sin phaseName debe seguir
   // distinguiéndose de un día cualquiera (antes quedaba completamente plana). El día real de
-  // hoy es "hoy" siempre por cálculo local de useCalendario (baseDayForDate), nunca por el
+  // hoy es "hoy" siempre por cálculo local de useCalendar (baseDayForDate), nunca por el
   // `isToday` que devuelve /user-phase/metrics — ese campo está calculado contra el anchor de
-  // cada semana pedida, no contra la fecha real, así que useCalendario lo ignora a propósito
+  // cada semana pedida, no contra la fecha real, así que useCalendar lo ignora a propósito
   // (ver el merge de phaseByDate). Por default el día de hoy también viene seleccionado, así
   // que hay que seleccionar otro día primero para poder ver el anillo de "hoy" sin que el de
   // "seleccionado" lo tape.
@@ -443,7 +443,7 @@ test.describe("/calendario", () => {
     await mockMoonPhaseRange(page);
 
     await seedAuthToken(page, token);
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
     await page.waitForLoadState("networkidle");
 
     // Deselecciona el día de hoy (seleccionado por default) para poder ver su anillo de "hoy"
@@ -466,11 +466,11 @@ test.describe("/calendario", () => {
     expect(boxShadow).toContain("107, 92, 125");
   });
 
-  // Regression test for: useCalendario pide /user-phase/metrics una vez por cada semana
+  // Regression test for: useCalendar pide /user-phase/metrics una vez por cada semana
   // visible (un anchor distinto por semana, ver weekAnchorDatesForMonth), y el BE calcula
   // `isToday` de cada día comparándolo contra el anchor de ESA llamada, no contra la fecha
   // real de hoy. Un spread completo de esa respuesta pisaba el `isToday` correcto que ya
-  // calculaba useCalendario, marcando como "hoy" el anchor de cada semana (ej. cada domingo
+  // calculaba useCalendar, marcando como "hoy" el anchor de cada semana (ej. cada domingo
   // del mes) además del día real. Fix: el merge de phaseByDate solo transplanta `phaseName`,
   // nunca `isToday`.
   test("solo el día real de hoy tiene el anillo de 'hoy', no los anchors de cada semana pedida", async ({
@@ -490,7 +490,7 @@ test.describe("/calendario", () => {
     // bug, cada anchor de semana (no solo el día real) terminaba con isToday:true en su propia
     // respuesta y pisaba el resto.
     await seedAuthToken(page, token);
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
     await page.waitForLoadState("networkidle");
 
     // Deselecciona el día de hoy (seleccionado por default) para que su anillo de "hoy" no
@@ -528,7 +528,7 @@ test.describe("/calendario", () => {
       return fulfillJson(route, moonRangeBody(start, end));
     });
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
     await page.waitForLoadState("networkidle");
 
     // React.StrictMode (dev) invoca este efecto dos veces por diseño para una llamada GET
@@ -581,7 +581,7 @@ test.describe("/calendario", () => {
     await page.route(`${API_URL}/moon-phase/range*`, (route) => route.abort());
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
     await page.waitForLoadState("networkidle");
 
     // El resto del calendario sigue funcionando (fase de ciclo no depende del dato lunar).
@@ -591,11 +591,11 @@ test.describe("/calendario", () => {
     // general del calendario.
     await expect(page.getByTestId("calendar-day-moon-icon")).toHaveCount(0);
     await expect(page.getByTestId("day-detail-moon-block")).toHaveCount(0);
-    await expect(page.getByTestId("calendario-error")).toHaveCount(0);
+    await expect(page.getByTestId("calendar-error")).toHaveCount(0);
   });
 });
 
-test.describe("/calendario — resumen de perfil", () => {
+test.describe("/calendar — resumen de perfil", () => {
   test("con perfil configurado, muestra los 4 campos del resumen", async ({
     page,
   }) => {
@@ -603,17 +603,17 @@ test.describe("/calendario — resumen de perfil", () => {
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
 
-    const card = page.getByTestId("resumen-perfil-card");
+    const card = page.getByTestId("cycle-summary-card");
     await expect(card).toBeVisible();
     // periodSummaryBody() default tiene activePeriod.isActive: true, así que la fila de "día
     // del ciclo" queda reemplazada por el badge — se verifica en el test siguiente.
-    await expect(page.getByTestId("resumen-average-length")).toContainText(
+    await expect(page.getByTestId("cycle-summary-average-length")).toContainText(
       "28 días",
     );
-    await expect(page.getByTestId("resumen-next-period")).toBeVisible();
-    await expect(page.getByTestId("resumen-fertile-window")).toBeVisible();
+    await expect(page.getByTestId("cycle-summary-next-period")).toBeVisible();
+    await expect(page.getByTestId("cycle-summary-fertile-window")).toBeVisible();
   });
 
   test("activePeriod.isActive true muestra el badge 'En tu período' en vez de la fila de día de ciclo", async ({
@@ -623,15 +623,15 @@ test.describe("/calendario — resumen de perfil", () => {
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
 
-    await expect(page.getByTestId("resumen-active-period-badge")).toContainText(
+    await expect(page.getByTestId("cycle-summary-active-period-badge")).toContainText(
       "En tu período · día 3",
     );
-    await expect(page.getByTestId("resumen-cycle-day")).toHaveCount(0);
+    await expect(page.getByTestId("cycle-summary-day")).toHaveCount(0);
   });
 
-  test("con perfil no configurado, muestra el estado vacío y el CTA navega a /perfil", async ({
+  test("con perfil no configurado, muestra el estado vacío y el CTA navega a /profile", async ({
     page,
   }) => {
     const token = fakeIdToken();
@@ -662,19 +662,19 @@ test.describe("/calendario — resumen de perfil", () => {
     await mockMoonPhaseRange(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
 
-    await expect(page.getByTestId("resumen-perfil-empty")).toContainText(
+    await expect(page.getByTestId("cycle-summary-empty")).toContainText(
       "Todavía no configuraste los datos de tu ciclo",
     );
-    await page.getByTestId("resumen-perfil-configure-cta").click();
-    await expect(page).toHaveURL(`${BASE_URL}/perfil`);
+    await page.getByTestId("cycle-summary-configure-cta").click();
+    await expect(page).toHaveURL(`${BASE_URL}/profile`);
   });
 
   test("usuaria guest (sin token) también ve el estado vacío, no fallbacks por campo", async ({
     page,
   }) => {
-    // /calendario no está detrás de ProtectedRoute — un guest puede entrar directo. Sin token,
+    // /calendar no está detrás de ProtectedRoute — un guest puede entrar directo. Sin token,
     // usePeriodSummary nunca llama a getPeriodSummary y `summary` queda en `null` (no en un
     // objeto con los 3 campos en null) — regresión: la card debe tratar esto igual que el
     // "perfil no configurado" de arriba, no caer al branch de datos con "Sin datos"/"días" sueltos.
@@ -689,14 +689,14 @@ test.describe("/calendario — resumen de perfil", () => {
     // Dato lunar es público — corre también para un guest sin token (no gatea detrás de auth).
     await mockMoonPhaseRange(page);
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
 
-    await expect(page.getByTestId("resumen-perfil-empty")).toContainText(
+    await expect(page.getByTestId("cycle-summary-empty")).toContainText(
       "Todavía no configuraste los datos de tu ciclo",
     );
-    await expect(page.getByTestId("resumen-average-length")).toHaveCount(0);
-    await page.getByTestId("resumen-perfil-configure-cta").click();
-    await expect(page).toHaveURL(`${BASE_URL}/perfil`);
+    await expect(page.getByTestId("cycle-summary-average-length")).toHaveCount(0);
+    await page.getByTestId("cycle-summary-configure-cta").click();
+    await expect(page).toHaveURL(`${BASE_URL}/profile`);
   });
 
   test("error de red en /period/summary muestra el mensaje de error", async ({
@@ -721,10 +721,10 @@ test.describe("/calendario — resumen de perfil", () => {
     await mockMoonPhaseRange(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
 
-    await expect(page.getByTestId("resumen-perfil-card-error")).toBeVisible();
-    await expect(page.getByTestId("resumen-perfil-retry")).toBeVisible();
+    await expect(page.getByTestId("cycle-summary-card-error")).toBeVisible();
+    await expect(page.getByTestId("cycle-summary-retry")).toBeVisible();
   });
 
   test("viewport 375px — sin overflow horizontal con el resumen de perfil visible", async ({
@@ -735,10 +735,10 @@ test.describe("/calendario — resumen de perfil", () => {
     await seedAuthToken(page, token);
 
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`${BASE_URL}/calendario`);
+    await page.goto(`${BASE_URL}/calendar`);
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByTestId("resumen-perfil-card")).toBeVisible();
+    await expect(page.getByTestId("cycle-summary-card")).toBeVisible();
     const hasOverflow = await page.evaluate(
       () =>
         document.documentElement.scrollWidth >
@@ -762,7 +762,7 @@ test.describe("/chat conserva funcionalidad con el shell nuevo", () => {
   });
 });
 
-test.describe("/perfil", () => {
+test.describe("/profile", () => {
   test("banner Crear cuenta se muestra en estado guest y navega a /login", async ({
     page,
   }) => {
@@ -773,7 +773,7 @@ test.describe("/perfil", () => {
       fulfillJson(route, AGENT_ME_BODY),
     );
 
-    await page.goto(`${BASE_URL}/perfil`);
+    await page.goto(`${BASE_URL}/profile`);
 
     await expect(page.getByTestId("create-account-banner")).toBeVisible();
     await page.getByTestId("create-account-button").click();
@@ -787,7 +787,7 @@ test.describe("/perfil", () => {
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/perfil`);
+    await page.goto(`${BASE_URL}/profile`);
 
     await expect(page.getByTestId("create-account-banner")).toHaveCount(0);
   });
@@ -808,7 +808,7 @@ test.describe("/perfil", () => {
       await fulfillJson(route, periodSummaryBody({ cycleId: "cycle-2" }));
     });
 
-    await page.goto(`${BASE_URL}/perfil`);
+    await page.goto(`${BASE_URL}/profile`);
 
     await expect(page.getByTestId("cycle-form")).toBeVisible();
     await page.getByTestId("cycle-length-select").selectOption("30");
@@ -845,7 +845,7 @@ test.describe("/perfil", () => {
       return route.abort();
     });
 
-    await page.goto(`${BASE_URL}/perfil`);
+    await page.goto(`${BASE_URL}/profile`);
 
     const downloadButton = page.getByTestId("download-data-button");
     const deleteButton = page.getByTestId("delete-all-button");
@@ -869,7 +869,7 @@ test.describe("/perfil", () => {
       return route.abort();
     });
 
-    await page.goto(`${BASE_URL}/perfil`);
+    await page.goto(`${BASE_URL}/profile`);
 
     const toggle = page.getByTestId("toggle-journal-reminder");
     await expect(toggle).toHaveAttribute("aria-checked", "false");
@@ -879,16 +879,16 @@ test.describe("/perfil", () => {
   });
 });
 
-test.describe("/perfil/privacidad", () => {
+test.describe("/profile/privacy", () => {
   test("botones Próximamente están deshabilitados", async ({ page }) => {
     const token = fakeIdToken();
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
 
-    await page.goto(`${BASE_URL}/perfil/privacidad`);
+    await page.goto(`${BASE_URL}/profile/privacy`);
 
-    await expect(page.getByTestId("privacidad-download-button")).toBeDisabled();
-    await expect(page.getByTestId("privacidad-delete-button")).toBeDisabled();
+    await expect(page.getByTestId("profile-privacy-download-button")).toBeDisabled();
+    await expect(page.getByTestId("profile-privacy-delete-button")).toBeDisabled();
   });
 });
 
@@ -898,7 +898,7 @@ test.describe("Responsive 768px — DataPrivacyCard no se comprime con el sideba
   // de botones `shrink-0`/`whitespace-nowrap` que no cedía espacio — el bloque de texto quedaba
   // comprimido a una columna angosta, envolviendo palabra por palabra. Fix: el layout pasa a
   // `lg:flex-row` (1024px) en vez de `md:flex-row`, así que a 768px el texto ocupa el ancho
-  // completo del <main> en su propia fila. Este test navega /perfil completo (con el Sidebar
+  // completo del <main> en su propia fila. Este test navega /profile completo (con el Sidebar
   // real montado vía AppShell), no la card en aislamiento — así es como QA reprodujo el bug.
   test("el texto de 'Datos y privacidad' no se envuelve en columnas de una palabra a 768px", async ({
     page,
@@ -908,7 +908,7 @@ test.describe("Responsive 768px — DataPrivacyCard no se comprime con el sideba
     await seedAuthToken(page, token);
 
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto(`${BASE_URL}/perfil`);
+    await page.goto(`${BASE_URL}/profile`);
     await page.waitForLoadState("networkidle");
 
     // El sidebar fijo debe estar presente y visible — si no lo está, la medición de abajo no
@@ -997,12 +997,12 @@ test.describe("Responsive 768px — CycleCard no comprime el aviso de 'Tu ciclo'
 
 test.describe("Responsive 375px — sin overflow horizontal", () => {
   const routes = [
-    "/hoy",
+    "/today",
     "/chat",
-    "/calendario",
-    "/aprende",
-    "/perfil",
-    "/perfil/privacidad",
+    "/calendar",
+    "/learn",
+    "/profile",
+    "/profile/privacy",
   ];
 
   for (const route of routes) {

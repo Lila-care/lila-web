@@ -17,7 +17,7 @@ function formatLongDate(isoDate: string): string {
 function CardShell({ children }: { children: ReactNode }) {
   return (
     <div
-      data-testid="resumen-perfil-card"
+      data-testid="cycle-summary-card"
       role="region"
       aria-label="Resumen de tu perfil de ciclo"
       className="bg-white rounded-3xl p-6"
@@ -64,14 +64,14 @@ function SummaryRow({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function ResumenPerfilCard() {
+function CycleSummaryCard() {
   const { summary, loading, error, refetch } = usePeriodSummary();
   const [, navigate] = useLocation();
 
   if (loading) {
     return (
       <div
-        data-testid="resumen-perfil-card"
+        data-testid="cycle-summary-card"
         role="region"
         aria-label="Resumen de tu perfil de ciclo"
         aria-live="polite"
@@ -101,7 +101,7 @@ function ResumenPerfilCard() {
   if (error) {
     return (
       <div
-        data-testid="resumen-perfil-card-error"
+        data-testid="cycle-summary-card-error"
         role="region"
         aria-label="Resumen de tu perfil de ciclo"
         className="bg-white rounded-3xl p-6 text-sm"
@@ -111,7 +111,7 @@ function ResumenPerfilCard() {
         <button
           type="button"
           onClick={refetch}
-          data-testid="resumen-perfil-retry"
+          data-testid="cycle-summary-retry"
           className="block mt-3 font-semibold underline"
         >
           Reintentar
@@ -140,7 +140,7 @@ function ResumenPerfilCard() {
             className="shrink-0 mt-0.5"
           />
           <p
-            data-testid="resumen-perfil-empty"
+            data-testid="cycle-summary-empty"
             className="text-[14px] leading-relaxed"
             style={{ color: NO_PHASE_INFO.textColor }}
           >
@@ -150,8 +150,8 @@ function ResumenPerfilCard() {
         </div>
         <button
           type="button"
-          onClick={() => navigate("/perfil")}
-          data-testid="resumen-perfil-configure-cta"
+          onClick={() => navigate("/profile")}
+          data-testid="cycle-summary-configure-cta"
           className="w-full py-3 rounded-xl text-sm font-semibold text-white"
           style={{ background: "#9B72C8" }}
         >
@@ -173,7 +173,7 @@ function ResumenPerfilCard() {
       {activePeriod?.isActive ? (
         <div
           className="flex items-center gap-2 py-3"
-          data-testid="resumen-active-period-badge"
+          data-testid="cycle-summary-active-period-badge"
           style={{ borderBottom: "1px solid rgba(61,43,80,0.08)" }}
         >
           <span
@@ -191,7 +191,7 @@ function ResumenPerfilCard() {
         <SummaryRow
           label="Día del ciclo"
           value={
-            <span data-testid="resumen-cycle-day">
+            <span data-testid="cycle-summary-day">
               {cycle?.currentCycleDay != null
                 ? `Día ${cycle.currentCycleDay} de tu ciclo`
                 : "Sin datos"}
@@ -203,7 +203,7 @@ function ResumenPerfilCard() {
       <SummaryRow
         label="Duración promedio"
         value={
-          <span data-testid="resumen-average-length">
+          <span data-testid="cycle-summary-average-length">
             {cycle?.averageLength} días
           </span>
         }
@@ -212,7 +212,7 @@ function ResumenPerfilCard() {
       <SummaryRow
         label="Próximo período"
         value={
-          <span data-testid="resumen-next-period">
+          <span data-testid="cycle-summary-next-period">
             {cycle?.predictedNextStart
               ? formatLongDate(cycle.predictedNextStart)
               : "Sin datos"}
@@ -224,7 +224,7 @@ function ResumenPerfilCard() {
         <SummaryRow
           label="Ventana fértil"
           value={
-            <span data-testid="resumen-fertile-window">
+            <span data-testid="cycle-summary-fertile-window">
               {formatLongDate(fertileWindow.start)} –{" "}
               {formatLongDate(fertileWindow.end)}
             </span>
@@ -234,8 +234,8 @@ function ResumenPerfilCard() {
 
       <button
         type="button"
-        onClick={() => navigate("/perfil")}
-        data-testid="resumen-perfil-link"
+        onClick={() => navigate("/profile")}
+        data-testid="cycle-summary-link"
         className="flex items-center gap-1 mt-4 text-sm font-semibold"
         style={{ color: "#9B72C8" }}
       >
@@ -245,4 +245,4 @@ function ResumenPerfilCard() {
   );
 }
 
-export default ResumenPerfilCard;
+export default CycleSummaryCard;

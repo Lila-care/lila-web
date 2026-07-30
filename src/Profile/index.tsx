@@ -1,15 +1,15 @@
 import AppShell from "@/components/AppShell/AppShell";
 import { useAuth } from "@/auth/AuthContext";
-import { usePerfil } from "@/Perfil/usePerfil";
-import CreateAccountBanner from "@/Perfil/CreateAccountBanner";
-import CycleCard from "@/Perfil/CycleCard";
-import NotificationsCard from "@/Perfil/NotificationsCard";
-import DataPrivacyCard from "@/Perfil/DataPrivacyCard";
+import { useProfile } from "@/Profile/useProfile";
+import CreateAccountBanner from "@/Profile/CreateAccountBanner";
+import CycleCard from "@/Profile/CycleCard";
+import NotificationsCard from "@/Profile/NotificationsCard";
+import DataPrivacyCard from "@/Profile/DataPrivacyCard";
 
-function PerfilPage() {
+function ProfilePage() {
   const { token } = useAuth();
   const { summary, loading, error, saving, saveError, saveSuccess, saveCycleInfo } =
-    usePerfil();
+    useProfile();
 
   return (
     <AppShell>
@@ -28,7 +28,7 @@ function PerfilPage() {
 
         {loading && (
           <div
-            data-testid="perfil-loading"
+            data-testid="profile-loading"
             className="bg-white rounded-3xl p-10 mb-7 animate-pulse"
             style={{ border: "1px solid rgba(61,43,80,0.07)" }}
           >
@@ -39,7 +39,7 @@ function PerfilPage() {
 
         {!loading && error && (
           <div
-            data-testid="perfil-error"
+            data-testid="profile-error"
             className="bg-white rounded-3xl p-8 mb-7 text-sm"
             style={{ border: "1px solid rgba(139,58,82,0.2)", color: "#8B3A52" }}
           >
@@ -68,4 +68,4 @@ function PerfilPage() {
   );
 }
 
-export default PerfilPage;
+export default ProfilePage;

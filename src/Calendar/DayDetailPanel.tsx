@@ -1,6 +1,6 @@
 import { getPhaseInfo } from "@/lib/phaseInfo";
-import type { CalendarDayUiModel } from "@/Calendario/useCalendario";
-import type { CalendarViewMode } from "@/Calendario/ViewModeToggle";
+import type { CalendarDayUiModel } from "@/Calendar/useCalendar";
+import type { CalendarViewMode } from "@/Calendar/ViewModeToggle";
 
 interface DayDetailPanelProps {
   date: string | null;
@@ -35,10 +35,10 @@ function DayDetailPanel({ date, dayData, viewMode }: DayDetailPanelProps) {
     );
   }
 
-  const showCycle = viewMode !== "luna";
-  const showMoon = viewMode !== "ciclo";
+  const showCycle = viewMode !== "moon";
+  const showMoon = viewMode !== "cycle";
   const info = getPhaseInfo(dayData?.phaseName ?? null);
-  // Dato lunar viene de useCalendario (fetch de /moon-phase/range). Si todavía no cargó o falló
+  // Dato lunar viene de useCalendar (fetch de /moon-phase/range). Si todavía no cargó o falló
   // (moonPhaseName/moonIllumination en null), se oculta el bloque en vez de mostrar un valor
   // incorrecto — mismo criterio que "Sin datos de fase" usa para el ciclo.
   const moonPhaseName = dayData?.moonPhaseName ?? null;

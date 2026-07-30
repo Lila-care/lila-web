@@ -17,13 +17,13 @@ const WHAT_WE_NEVER_DO = [
 ];
 
 // Contenido 100% estático — mismos botones "Próximamente" del Perfil (sin endpoint en ms-lila).
-function PrivacidadPage() {
+function PrivacyPage() {
   return (
     <AppShell>
       <main className="px-6 md:px-16 pt-14 pb-16 max-w-[920px]">
         <Link
-          href="/perfil"
-          data-testid="privacidad-back-link"
+          href="/profile"
+          data-testid="profile-privacy-back-link"
           className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold mb-6"
           style={{ color: "rgba(61,43,80,0.5)" }}
         >
@@ -132,7 +132,7 @@ function PrivacidadPage() {
               type="button"
               disabled
               title="Próximamente"
-              data-testid="privacidad-download-button"
+              data-testid="profile-privacy-download-button"
               className="flex items-center justify-center gap-2 bg-white text-[#9B72C8] px-5 py-3 rounded-2xl text-sm font-semibold cursor-not-allowed opacity-70 whitespace-nowrap"
             >
               <Download size={16} />
@@ -142,7 +142,7 @@ function PrivacidadPage() {
               type="button"
               disabled
               title="Próximamente"
-              data-testid="privacidad-delete-button"
+              data-testid="profile-privacy-delete-button"
               className="bg-white/15 text-white px-5 py-3 rounded-2xl text-sm font-semibold cursor-not-allowed opacity-70 whitespace-nowrap"
               style={{ border: "1.5px solid rgba(255,255,255,0.4)" }}
             >
@@ -155,4 +155,4 @@ function PrivacidadPage() {
   );
 }
 
-export default PrivacidadPage;
+export default PrivacyPage;

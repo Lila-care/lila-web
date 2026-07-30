@@ -1,9 +1,9 @@
 import { Link } from "wouter";
 import { MessageCircle, Sparkles } from "lucide-react";
 import AppShell from "@/components/AppShell/AppShell";
-import { useHoy } from "@/Hoy/useHoy";
-import PhaseHeroCard from "@/Hoy/PhaseHeroCard";
-import WeekStrip from "@/Hoy/WeekStrip";
+import { useToday } from "@/Today/useToday";
+import PhaseHeroCard from "@/Today/PhaseHeroCard";
+import WeekStrip from "@/Today/WeekStrip";
 
 function formatToday(): string {
   return new Date().toLocaleDateString("es-CO", {
@@ -13,8 +13,8 @@ function formatToday(): string {
   });
 }
 
-function HoyPage() {
-  const { summary, week, today, loading, error } = useHoy();
+function TodayPage() {
+  const { summary, week, today, loading, error } = useToday();
 
   return (
     <AppShell>
@@ -31,7 +31,7 @@ function HoyPage() {
 
         {loading && (
           <div
-            data-testid="hoy-loading"
+            data-testid="today-loading"
             className="bg-white rounded-3xl p-10 mb-7 animate-pulse"
             style={{ border: "1px solid rgba(61,43,80,0.07)" }}
           >
@@ -42,7 +42,7 @@ function HoyPage() {
 
         {!loading && error && (
           <div
-            data-testid="hoy-error"
+            data-testid="today-error"
             className="bg-white rounded-3xl p-8 mb-7 text-sm"
             style={{
               border: "1px solid rgba(139,58,82,0.2)",
@@ -130,4 +130,4 @@ function HoyPage() {
   );
 }
 
-export default HoyPage;
+export default TodayPage;

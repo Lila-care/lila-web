@@ -11,7 +11,7 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-interface UseHoyReturn {
+interface UseTodayReturn {
   summary: PeriodSummary | null;
   week: DayPhaseUiModel[];
   today: DayPhaseUiModel | null;
@@ -22,7 +22,7 @@ interface UseHoyReturn {
 // Trae el resumen del ciclo y la semana de fases; deriva la fase de "hoy" del elemento con
 // isToday:true en vez de reimplementar la lógica de resolución de fase en el FE (vive en
 // ms-lila/src/user-phase/user-phase.service.ts).
-export function useHoy(): UseHoyReturn {
+export function useToday(): UseTodayReturn {
   const { token } = useAuth();
   const [summary, setSummary] = useState<PeriodSummary | null>(null);
   const [week, setWeek] = useState<DayPhaseUiModel[]>([]);

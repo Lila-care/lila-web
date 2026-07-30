@@ -1,5 +1,5 @@
 import { getPhaseInfo } from "@/lib/phaseInfo";
-import { usePhaseHeroMoon } from "@/Hoy/usePhaseHeroMoon";
+import { usePhaseHeroMoon } from "@/Today/usePhaseHeroMoon";
 import type { PhaseName } from "@/api/cycleTracking";
 
 interface PhaseHeroCardProps {

@@ -117,9 +117,9 @@
 
   /* Fases del ciclo — el elemento firma del sistema */
   --color-phase-menstrual:  var(--plum-700);
-  --color-phase-folicular:  var(--forest-700);
-  --color-phase-ovulatoria: var(--coral-400);
-  --color-phase-lutea:      var(--orchid-400);
+  --color-phase-follicular:  var(--forest-700);
+  --color-phase-ovulatory: var(--coral-400);
+  --color-phase-luteal:      var(--orchid-400);
 
   /* ----------------------------------------------------------
      3. ELEVACIÓN

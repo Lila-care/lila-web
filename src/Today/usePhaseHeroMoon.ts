@@ -10,7 +10,7 @@ interface UsePhaseHeroMoonReturn {
   loading: boolean;
 }
 
-// Dato lunar de hoy para PhaseHeroCard — mismo endpoint público que useCalendario
+// Dato lunar de hoy para PhaseHeroCard — mismo endpoint público que useCalendar
 // (GET /moon-phase/range), pedido como rango de un solo día (start=end=hoy) en vez de
 // reimplementar el cálculo sinódico client-side (ver git history de src/lib/moonPhase.ts,
 // eliminado). No hay error general de tarjeta: si falla o vuelve vacío, `moon` queda en null

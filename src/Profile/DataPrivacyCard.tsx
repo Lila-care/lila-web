@@ -22,7 +22,7 @@ function DataPrivacyCard() {
         </div>
         <div className="min-w-0 flex-1">
           <Link
-            href="/perfil/privacidad"
+            href="/profile/privacy"
             data-testid="privacy-link"
             className="inline-block font-semibold text-[19px] mb-2"
             style={{ fontFamily: "'Playfair Display', serif", color: "#3D2B50" }}

@@ -1,19 +1,26 @@
 import { useState } from "react";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { useLocation } from "wouter";
-import { useCalendario } from "@/Calendario/useCalendario";
-import MonthGrid from "@/Calendario/MonthGrid";
+import { useCalendar } from "@/Calendar/useCalendar";
+import MonthGrid from "@/Calendar/MonthGrid";
 
 interface CalendarSnapshotCardProps {
   onClose?: () => void;
 }
 
 // Reusa MonthGrid en su variante "compact" (mismo diseño y lógica de fase/luna que
-// Calendario/index.tsx) con su propio fetch vía useCalendario — se puede montar en cualquier
-// parte del chat sin depender del estado de la página /calendario.
+// Calendario/index.tsx) con su propio fetch vía useCalendar — se puede montar en cualquier
+// parte del chat sin depender del estado de la página /calendar.
 function CalendarSnapshotCard({ onClose }: CalendarSnapshotCardProps) {
-  const { year, month, days, loading, error, goToPreviousMonth, goToNextMonth } =
-    useCalendario();
+  const {
+    year,
+    month,
+    days,
+    loading,
+    error,
+    goToPreviousMonth,
+    goToNextMonth,
+  } = useCalendar();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [, navigate] = useLocation();
 
@@ -29,7 +36,10 @@ function CalendarSnapshotCard({ onClose }: CalendarSnapshotCardProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <CalendarIcon size={16} color="#9B72C8" />
-          <span className="text-[13px] font-semibold" style={{ color: "#3D2B50" }}>
+          <span
+            className="text-[13px] font-semibold"
+            style={{ color: "#3D2B50" }}
+          >
             Tu calendario
           </span>
         </div>
@@ -48,7 +58,9 @@ function CalendarSnapshotCard({ onClose }: CalendarSnapshotCardProps) {
       </div>
 
       {loading && (
-        <div className="text-xs text-[#8A8194] py-6 text-center">Cargando...</div>
+        <div className="text-xs text-[#8A8194] py-6 text-center">
+          Cargando...
+        </div>
       )}
 
       {!loading && error && (
@@ -63,7 +75,7 @@ function CalendarSnapshotCard({ onClose }: CalendarSnapshotCardProps) {
           month={month}
           days={days}
           selectedDate={selectedDate}
-          viewMode="ambos"
+          viewMode="both"
           onSelectDate={setSelectedDate}
           onPrevMonth={goToPreviousMonth}
           onNextMonth={goToNextMonth}
@@ -73,7 +85,7 @@ function CalendarSnapshotCard({ onClose }: CalendarSnapshotCardProps) {
 
       <button
         type="button"
-        onClick={() => navigate("/calendario")}
+        onClick={() => navigate("/calendar")}
         data-testid="chat-calendar-snapshot-cta"
         className="w-full mt-3 py-2.5 rounded-xl text-[13px] font-semibold"
         style={{ color: "#fff", background: "#4A2D6E" }}

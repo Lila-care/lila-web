@@ -98,7 +98,7 @@ function ChatPage() {
       className="flex h-screen overflow-hidden"
       style={{ background: "#FAF8FC" }}
     >
-      {/* Shell principal — nav Hoy/Chat/Calendario/Aprende/Perfil, compartido con el resto de la app.
+      {/* Shell principal — nav Today/Chat/Calendar/Learn/Profile, compartido con el resto de la app.
           Colapsado por defecto en /chat: ya existe el rail de conversaciones, así que mostrar
           ambos sidebars a la vez duplica el espacio lateral. */}
       <Sidebar collapsible />
@@ -202,7 +202,7 @@ function ChatPage() {
           className="relative flex-1 overflow-hidden"
           style={{ background: "#FAF8FC" }}
         >
-          {/* Snapshot del calendario, mismo componente que usa /calendario (MonthGrid) en su
+          {/* Snapshot del calendario, mismo componente que usa /calendar (MonthGrid) en su
               variante "compact" — se abre/cierra con el botón de calendario del header. */}
           {showCalendarCard && (
             <div className="absolute top-4 right-4 z-30 w-[320px] max-w-[calc(100vw-2rem)]">

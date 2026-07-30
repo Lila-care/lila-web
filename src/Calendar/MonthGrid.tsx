@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Moon } from "lucide-react";
 import { getPhaseInfo, PHASE_INFO, NO_PHASE_INFO } from "@/lib/phaseInfo";
-import type { CalendarDayUiModel } from "@/Calendario/useCalendario";
-import type { CalendarViewMode } from "@/Calendario/ViewModeToggle";
+import type { CalendarDayUiModel } from "@/Calendar/useCalendar";
+import type { CalendarViewMode } from "@/Calendar/ViewModeToggle";
 
 const MONTH_LABEL = [
   "Enero",
@@ -21,7 +21,7 @@ const WEEKDAY_LABEL = ["D", "L", "M", "X", "J", "V", "S"];
 
 // Umbral de iluminación para marcar un día como luna llena (>=97%) o nueva (<=3%) en la
 // grilla — mismo criterio que el BE usa para esos extremos. moonIllumination viene del
-// endpoint /moon-phase/range (fetcheado por useCalendario); null si todavía no cargó o falló,
+// endpoint /moon-phase/range (fetcheado por useCalendar); null si todavía no cargó o falló,
 // en cuyo caso el ícono simplemente no se muestra.
 function isNotableMoonDay(dayData: CalendarDayUiModel | undefined): boolean {
   if (dayData?.moonIllumination == null) return false;
@@ -58,8 +58,8 @@ function MonthGrid({
   showLegend = size === "full",
 }: MonthGridProps) {
   const compact = size === "compact";
-  const showCycle = viewMode !== "luna";
-  const showMoon = viewMode !== "ciclo";
+  const showCycle = viewMode !== "moon";
+  const showMoon = viewMode !== "cycle";
   const dayByDate = new Map(days.map((d) => [d.date, d]));
   const firstOfMonth = new Date(Date.UTC(year, month, 1));
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
@@ -76,13 +76,21 @@ function MonthGrid({
     <div
       data-testid="month-grid"
       data-size={size}
-      className={compact ? "bg-white rounded-2xl p-4" : "bg-white rounded-3xl p-7"}
+      className={
+        compact ? "bg-white rounded-2xl p-4" : "bg-white rounded-3xl p-7"
+      }
       style={{
         border: "1px solid rgba(61,43,80,0.07)",
         boxShadow: compact ? undefined : "0 4px 24px rgba(61,43,80,0.05)",
       }}
     >
-      <div className={compact ? "flex items-center justify-between mb-3" : "flex items-center justify-between mb-5"}>
+      <div
+        className={
+          compact
+            ? "flex items-center justify-between mb-3"
+            : "flex items-center justify-between mb-5"
+        }
+      >
         <button
           type="button"
           onClick={onPrevMonth}
@@ -97,7 +105,9 @@ function MonthGrid({
           <ChevronLeft size={compact ? 12 : 15} color="#3D2B50" />
         </button>
         <div
-          className={compact ? "font-semibold text-sm" : "font-semibold text-lg"}
+          className={
+            compact ? "font-semibold text-sm" : "font-semibold text-lg"
+          }
           style={{ fontFamily: "'Playfair Display', serif" }}
         >
           {MONTH_LABEL[month]} {year}
@@ -117,7 +127,13 @@ function MonthGrid({
         </button>
       </div>
 
-      <div className={compact ? "grid grid-cols-7 gap-1 mb-1" : "grid grid-cols-7 gap-1.5 mb-2"}>
+      <div
+        className={
+          compact
+            ? "grid grid-cols-7 gap-1 mb-1"
+            : "grid grid-cols-7 gap-1.5 mb-2"
+        }
+      >
         {WEEKDAY_LABEL.map((label) => (
           <div
             key={label}
@@ -133,7 +149,11 @@ function MonthGrid({
         ))}
       </div>
 
-      <div className={compact ? "grid grid-cols-7 gap-1" : "grid grid-cols-7 gap-1.5"}>
+      <div
+        className={
+          compact ? "grid grid-cols-7 gap-1" : "grid grid-cols-7 gap-1.5"
+        }
+      >
         {cells.map((cell, idx) => {
           if (!cell) return <div key={`blank-${idx}`} />;
           const dayData = dayByDate.get(cell.date);
@@ -180,7 +200,9 @@ function MonthGrid({
                 <Moon
                   size={compact ? 8 : 10}
                   data-testid="calendar-day-moon-icon"
-                  className={compact ? "absolute bottom-1" : "absolute bottom-1.5"}
+                  className={
+                    compact ? "absolute bottom-1" : "absolute bottom-1.5"
+                  }
                   fill={info.dotColor}
                   color={info.dotColor}
                 />

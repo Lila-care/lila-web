@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import AccountBanner from "@/Chat/AccountBanner";
 
 interface NavItem {
+  id: string;
   label: string;
   href: string;
   icon: typeof Home;
@@ -21,12 +22,18 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Hoy", href: "/hoy", icon: Home, disabled: true },
-  { label: "Chat", href: "/chat", icon: MessageCircle },
-  { label: "Calendario", href: "/calendario", icon: Calendar },
-  { label: "Diario", href: "#", icon: BookOpen, disabled: true },
-  { label: "Aprende", href: "/aprende", icon: Sprout, disabled: true },
-  { label: "Perfil", href: "/perfil", icon: UserCircle2 },
+  { id: "today", label: "Hoy", href: "/today", icon: Home, disabled: true },
+  { id: "chat", label: "Chat", href: "/chat", icon: MessageCircle },
+  { id: "calendar", label: "Calendario", href: "/calendar", icon: Calendar },
+  { id: "journal", label: "Diario", href: "#", icon: BookOpen, disabled: true },
+  {
+    id: "learn",
+    label: "Aprende",
+    href: "/learn",
+    icon: Sprout,
+    disabled: true,
+  },
+  { id: "profile", label: "Perfil", href: "/profile", icon: UserCircle2 },
 ];
 
 interface SidebarProps {
@@ -87,8 +94,8 @@ function Sidebar({ collapsible = false }: SidebarProps) {
             if (item.disabled) {
               return (
                 <span
-                  key={item.label}
-                  data-testid={`nav-item-${item.label.toLowerCase()}`}
+                  key={item.id}
+                  data-testid={`nav-item-${item.id}`}
                   title="Próximamente"
                   aria-disabled="true"
                   className="flex items-center gap-3 px-3.5 py-[11px] rounded-xl text-[14.5px] font-medium cursor-not-allowed opacity-50"
@@ -105,9 +112,9 @@ function Sidebar({ collapsible = false }: SidebarProps) {
 
             return (
               <Link
-                key={item.label}
+                key={item.id}
                 href={item.href}
-                data-testid={`nav-item-${item.label.toLowerCase()}`}
+                data-testid={`nav-item-${item.id}`}
                 className={cn(
                   "flex items-center gap-3 px-3.5 py-[11px] rounded-xl text-[14.5px] font-medium transition-colors",
                   isActive ? "text-white font-semibold" : "hover:bg-black/5",

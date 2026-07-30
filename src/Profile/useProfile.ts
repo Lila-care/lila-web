@@ -13,7 +13,7 @@ interface CycleFormValues {
   periodLength: number;
 }
 
-interface UsePerfilReturn {
+interface UseProfileReturn {
   summary: PeriodSummary | null;
   loading: boolean;
   error: string | null;
@@ -25,7 +25,7 @@ interface UsePerfilReturn {
 
 // El BE no expone editar solo un campo — /period/start siempre recibe duración de ciclo +
 // última regla juntos en un único submit (regla del contrato técnico).
-export function usePerfil(): UsePerfilReturn {
+export function useProfile(): UseProfileReturn {
   const { token } = useAuth();
   const { summary: fetchedSummary, loading, error } = usePeriodSummary();
   // reportPeriodStart ya devuelve el PeriodSummary actualizado — lo guardamos aparte en vez de

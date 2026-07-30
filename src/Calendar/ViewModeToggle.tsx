@@ -1,4 +1,4 @@
-export type CalendarViewMode = "ambos" | "ciclo" | "luna";
+export type CalendarViewMode = "both" | "cycle" | "moon";
 
 interface ViewModeToggleProps {
   value: CalendarViewMode;
@@ -6,13 +6,13 @@ interface ViewModeToggleProps {
 }
 
 const OPTIONS: Array<{ value: CalendarViewMode; label: string }> = [
-  { value: "ambos", label: "Ambos" },
-  { value: "ciclo", label: "Ciclo" },
-  { value: "luna", label: "Luna" },
+  { value: "both", label: "Ambos" },
+  { value: "cycle", label: "Ciclo" },
+  { value: "moon", label: "Luna" },
 ];
 
 // Segmented control del handoff (Calendario.dc.html líneas 74-79) — filtra qué datos muestran
-// MonthGrid/DayDetailPanel: "ciclo" oculta la luna, "luna" oculta los colores de fase, "ambos"
+// MonthGrid/DayDetailPanel: "cycle" oculta la luna, "moon" oculta los colores de fase, "both"
 // (default) muestra todo. Estado local, no requiere backend.
 function ViewModeToggle({ value, onChange }: ViewModeToggleProps) {
   return (

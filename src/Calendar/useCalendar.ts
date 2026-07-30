@@ -99,7 +99,7 @@ function baseDayForDate(date: string, todayIso: string): CalendarDayUiModel {
 }
 
 // Combina la lista completa de días del mes visible con lo que ya haya llegado de cada fuente.
-// Cada Map se llena de forma independiente (ver los dos useEffect de useCalendario) — una fuente
+// Cada Map se llena de forma independiente (ver los dos useEffect de useCalendar) — una fuente
 // sin datos todavía (o que falló) simplemente deja sus campos en null en el día combinado.
 function buildCalendarDays(
   year: number,
@@ -140,7 +140,7 @@ function buildCalendarDays(
   );
 }
 
-interface UseCalendarioReturn {
+interface UseCalendarReturn {
   year: number;
   month: number; // 0-indexed
   days: CalendarDayUiModel[];
@@ -150,7 +150,7 @@ interface UseCalendarioReturn {
   goToNextMonth: () => void;
 }
 
-export function useCalendario(): UseCalendarioReturn {
+export function useCalendar(): UseCalendarReturn {
   const { token } = useAuth();
   const today = useMemo(() => new Date(), []);
   const [year, setYear] = useState(today.getUTCFullYear());
