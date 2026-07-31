@@ -9,45 +9,72 @@ on:
     types: [labeled]
     branches: ["**"]
 
+permissions:
+  contents: write
+
 jobs:
-  alias-staging:
+  deploy-staging:
     if: github.event.label.name == 'staging'
     runs-on: ubuntu-latest
     environment: staging
 
     steps:
-      - name: Wait for Vercel preview deployment to be ready
-        id: deployment
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      # Amplify (not Vercel) hosts this app, and it only auto-builds on a push to the
+      # "staging" branch itself — there's no per-PR preview environment. "staging" is a
+      # single shared slot: whichever PR gets labeled becomes what's live on
+      # staging.lilacareapp.com, so this force-pushes over whatever was there before.
+      - name: Push PR branch to staging
         run: |
-          for attempt in $(seq 1 20); do
-            RESPONSE=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
-              "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_ORG_ID&target=preview&limit=20")
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git push origin HEAD:refs/heads/staging --force
 
-            URL=$(echo "$RESPONSE" | jq -r --arg branch "$PR_BRANCH" \
-              '[.deployments[] | select(.meta.githubCommitRef == $branch) | select(.state == "READY")] | sort_by(.created) | last | .url')
+      - name: Wait for Amplify build to finish
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          AMPLIFY_APP_ID: d12kklaxfcdyvo
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          for attempt in $(seq 1 30); do
+            JOB=$(aws amplify list-jobs --app-id "$AMPLIFY_APP_ID" --branch-name staging --max-results 1)
+            STATUS=$(echo "$JOB" | jq -r '.jobSummaries[0].status')
+            COMMIT=$(echo "$JOB" | jq -r '.jobSummaries[0].commitId')
 
-            if [ -n "$URL" ] && [ "$URL" != "null" ]; then
-              echo "url=$URL" >> "$GITHUB_OUTPUT"
-              exit 0
+            echo "Amplify job status=$STATUS commit=$COMMIT (esperado $EXPECTED_SHA), intento $attempt/30"
+
+            if [ "$COMMIT" = "$EXPECTED_SHA" ]; then
+              if [ "$STATUS" = "SUCCEED" ]; then
+                exit 0
+              fi
+              if [ "$STATUS" = "FAILED" ] || [ "$STATUS" = "CANCELLED" ]; then
+                echo "Amplify build terminó en estado $STATUS" >&2
+                exit 1
+              fi
             fi
 
-            echo "Preview not ready yet for branch $PR_BRANCH (attempt $attempt/20), retrying in 15s..."
-            sleep 15
+            sleep 20
           done
 
-          echo "Timed out waiting for a READY preview deployment on branch $PR_BRANCH" >&2
+          echo "Timeout esperando el build de Amplify en staging" >&2
           exit 1
 
-      - name: Alias preview to staging domain
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          STAGING_ALIAS: ${{ secrets.VERCEL_STAGING_ALIAS }}
+      - name: Notify Product QA gate (#themis-verdict)
+        if: success()
         run: |
-          npx --yes vercel@latest alias set "${{ steps.deployment.outputs.url }}" "$STAGING_ALIAS" \
-            --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+          curl -sf -X POST "${{ secrets.SLACK_BOT_WEBHOOK_URL }}/webhooks/deploy-success" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOY_WEBHOOK_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "repo": "${{ github.repository }}",
+              "pr_number": ${{ github.event.pull_request.number }},
+              "pr_title": ${{ toJSON(github.event.pull_request.title) }},
+              "pr_url": "${{ github.event.pull_request.html_url }}",
+              "sha": "${{ github.event.pull_request.head.sha }}"
+            }'
