@@ -34,29 +34,31 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git push origin HEAD:refs/heads/staging --force
 
-      - name: Wait for Amplify build to finish
+      - name: Trigger and wait for Amplify build
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
           AMPLIFY_APP_ID: d12kklaxfcdyvo
-          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          # Amplify's webhook-triggered auto-build doesn't reliably create a job for pushes
+          # to "staging" (confirmed: GitHub delivers the webhook, Amplify 202s it, no job
+          # ever appears) — also, its jobs report commitId as the literal string "HEAD",
+          # never a real SHA, so there'd be no reliable way to match "our" job anyway.
+          # Starting the job ourselves sidesteps both problems: we get the exact jobId back.
+          JOB_ID=$(aws amplify start-job --app-id "$AMPLIFY_APP_ID" --branch-name staging --job-type RELEASE --query 'jobSummary.jobId' --output text)
+          echo "Started Amplify job $JOB_ID"
+
           for attempt in $(seq 1 30); do
-            JOB=$(aws amplify list-jobs --app-id "$AMPLIFY_APP_ID" --branch-name staging --max-results 1)
-            STATUS=$(echo "$JOB" | jq -r '.jobSummaries[0].status')
-            COMMIT=$(echo "$JOB" | jq -r '.jobSummaries[0].commitId')
+            STATUS=$(aws amplify get-job --app-id "$AMPLIFY_APP_ID" --branch-name staging --job-id "$JOB_ID" --query 'job.summary.status' --output text)
+            echo "Job $JOB_ID status=$STATUS, intento $attempt/30"
 
-            echo "Amplify job status=$STATUS commit=$COMMIT (esperado $EXPECTED_SHA), intento $attempt/30"
-
-            if [ "$COMMIT" = "$EXPECTED_SHA" ]; then
-              if [ "$STATUS" = "SUCCEED" ]; then
-                exit 0
-              fi
-              if [ "$STATUS" = "FAILED" ] || [ "$STATUS" = "CANCELLED" ]; then
-                echo "Amplify build terminó en estado $STATUS" >&2
-                exit 1
-              fi
+            if [ "$STATUS" = "SUCCEED" ]; then
+              exit 0
+            fi
+            if [ "$STATUS" = "FAILED" ] || [ "$STATUS" = "CANCELLED" ]; then
+              echo "Amplify build terminó en estado $STATUS" >&2
+              exit 1
             fi
 
             sleep 20
