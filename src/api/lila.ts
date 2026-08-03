@@ -1,3 +1,5 @@
+import { authFetch } from "@/api/authFetch";
+
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 // --- Auth Types ---
@@ -128,26 +130,28 @@ export async function sendMessage(
   body: { message: string; conversationId?: string },
   guestId?: string,
 ): Promise<ChatResponse> {
-  let headers: Record<string, string>;
-  if (token) {
-    headers = authHeaders(token);
-  } else if (guestId) {
-    headers = { ...jsonHeaders(), "x-guest-id": guestId };
-  } else {
-    headers = jsonHeaders();
-  }
-  const res = await fetch(`${BASE_URL}/lila/chat`, {
+  const url = `${BASE_URL}/lila/chat`;
+  const requestInit: RequestInit = {
     method: "POST",
-    headers,
     body: JSON.stringify(body),
-  });
+  };
+  // Only authenticated calls go through `authFetch` — guest requests carry no idToken to
+  // refresh, and routing them through it risks picking up a stale token left in localStorage.
+  const res = token
+    ? await authFetch(url, { ...requestInit, headers: authHeaders(token) })
+    : await fetch(url, {
+        ...requestInit,
+        headers: guestId
+          ? { ...jsonHeaders(), "x-guest-id": guestId }
+          : jsonHeaders(),
+      });
   return handleResponse<ChatResponse>(res);
 }
 
 export async function getConversations(
   token: string,
 ): Promise<{ conversations: ConversationSummary[] }> {
-  const res = await fetch(`${BASE_URL}/lila/conversations`, {
+  const res = await authFetch(`${BASE_URL}/lila/conversations`, {
     headers: authHeaders(token),
   });
   const data = await handleResponse<LilaConversation[]>(res);
@@ -174,7 +178,7 @@ export async function getConversation(
   token: string,
   id: string,
 ): Promise<LilaConversation> {
-  const res = await fetch(`${BASE_URL}/lila/conversations/${id}`, {
+  const res = await authFetch(`${BASE_URL}/lila/conversations/${id}`, {
     headers: authHeaders(token),
   });
   return handleResponse<LilaConversation>(res);
@@ -184,7 +188,7 @@ export async function deleteConversation(
   token: string,
   id: string,
 ): Promise<void> {
-  const res = await fetch(`${BASE_URL}/lila/conversations/${id}`, {
+  const res = await authFetch(`${BASE_URL}/lila/conversations/${id}`, {
     method: "DELETE",
     headers: authHeaders(token),
   });
@@ -194,7 +198,7 @@ export async function deleteConversation(
 }
 
 export async function getProfile(token: string): Promise<LilaProfile> {
-  const res = await fetch(`${BASE_URL}/lila/profile`, {
+  const res = await authFetch(`${BASE_URL}/lila/profile`, {
     headers: authHeaders(token),
   });
   return handleResponse<LilaProfile>(res);
@@ -204,7 +208,7 @@ export async function updateProfile(
   token: string,
   data: { tiers: ProfileTier[] },
 ): Promise<LilaProfile> {
-  const res = await fetch(`${BASE_URL}/lila/profile`, {
+  const res = await authFetch(`${BASE_URL}/lila/profile`, {
     method: "PUT",
     headers: authHeaders(token),
     body: JSON.stringify(data),
@@ -213,7 +217,7 @@ export async function updateProfile(
 }
 
 export async function getTemplate(token: string): Promise<LilaTemplate> {
-  const res = await fetch(`${BASE_URL}/lila/template`, {
+  const res = await authFetch(`${BASE_URL}/lila/template`, {
     headers: authHeaders(token),
   });
   return handleResponse<LilaTemplate>(res);
@@ -223,7 +227,7 @@ export async function updateTemplate(
   token: string,
   data: Partial<LilaTemplate>,
 ): Promise<LilaTemplate> {
-  const res = await fetch(`${BASE_URL}/lila/template`, {
+  const res = await authFetch(`${BASE_URL}/lila/template`, {
     method: "PUT",
     headers: authHeaders(token),
     body: JSON.stringify(data),
@@ -235,15 +239,20 @@ export async function getAgentMe(
   token: string | null,
   guestId?: string,
 ): Promise<UserAgent> {
+  const url = `${BASE_URL}/lila/agent/me`;
+  // Same split as `sendMessage`: authenticated calls go through `authFetch` for refresh-on-401;
+  // guest calls (no idToken to refresh) stay on plain `fetch` with the `x-guest-id` header.
+  if (token) {
+    const res = await authFetch(url, { headers: authHeaders(token) });
+    return handleResponse<UserAgent>(res);
+  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  } else if (guestId) {
+  if (guestId) {
     headers["x-guest-id"] = guestId;
   }
-  const res = await fetch(`${BASE_URL}/lila/agent/me`, { headers });
+  const res = await fetch(url, { headers });
   return handleResponse<UserAgent>(res);
 }
 
@@ -251,7 +260,7 @@ export async function migrateGuest(
   token: string,
   guestId: string,
 ): Promise<MigrateGuestResponse> {
-  const res = await fetch(`${BASE_URL}/lila/guest/migrate`, {
+  const res = await authFetch(`${BASE_URL}/lila/guest/migrate`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify({ guestId }),
