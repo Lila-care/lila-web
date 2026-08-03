@@ -1,0 +1,40 @@
+name: Check Staging Drift
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  check-staging-drift:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # staging is a per-PR preview slot (force-pushed by deploy-staging.yml), not a mirror
+      # of main, so this only reports drift — it never touches the branch. See
+      # agents/slack-bot/src/staging-drift.js in the workspace root repo for the notify side.
+      - name: Compare main against staging
+        id: diff
+        run: |
+          git fetch origin staging:refs/remotes/origin/staging
+          AHEAD_COUNT=$(git rev-list --count origin/staging..origin/main)
+          echo "ahead_count=$AHEAD_COUNT" >> "$GITHUB_OUTPUT"
+          echo "main_sha=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"
+          echo "staging_sha=$(git rev-parse origin/staging)" >> "$GITHUB_OUTPUT"
+
+      - name: Notify staging drift
+        if: steps.diff.outputs.ahead_count != '0'
+        run: |
+          curl -sf -X POST "${{ secrets.SLACK_BOT_WEBHOOK_URL }}/webhooks/staging-drift" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOY_WEBHOOK_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "repo": "${{ github.repository }}",
+              "ahead_count": ${{ steps.diff.outputs.ahead_count }},
+              "main_sha": "${{ steps.diff.outputs.main_sha }}",
+              "staging_sha": "${{ steps.diff.outputs.staging_sha }}",
+              "compare_url": "${{ github.server_url }}/${{ github.repository }}/compare/${{ steps.diff.outputs.staging_sha }}...${{ steps.diff.outputs.main_sha }}"
+            }'
