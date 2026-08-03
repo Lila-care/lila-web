@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, KeyboardEvent } from "react";
 import { ArrowUp } from "lucide-react";
 
 const SUGGESTIONS = [
@@ -20,6 +20,13 @@ export default function EmptyState({ onSend }: Props) {
     if (!value) return;
     onSend(value);
     setDraft("");
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend(draft);
+    }
   };
 
   return (
@@ -183,6 +190,7 @@ export default function EmptyState({ onSend }: Props) {
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Escríbeme..."
             className="flex-1 bg-transparent text-[15px] text-[#2A2530] outline-none placeholder:text-[#9B93A6]"
             style={{ fontFamily: "inherit", padding: "11px 0", border: "none" }}
