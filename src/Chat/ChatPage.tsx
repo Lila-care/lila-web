@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Bell, MoreVertical } from "lucide-react";
 import { useAuth } from "@/auth/AuthContext";
 import { getConversations } from "@/api/lila";
 import type { ConversationSummary } from "@/api/lila";
+import Sidebar from "@/components/AppShell/Sidebar";
+import MobileNav from "@/components/AppShell/MobileNav";
 import { useLilaChat } from "./useLilaChat";
 import ChatWindow from "./ChatWindow";
 import ConversationList from "./ConversationList";
-import AccountBanner from "./AccountBanner";
 import LoginGateModal from "./LoginGateModal";
 import UpgradeGateModal from "./UpgradeGateModal";
 
 function ChatPage() {
-  const { token, email, name, picture, logout } = useAuth();
+  const { token } = useAuth();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -69,22 +70,25 @@ function ChatPage() {
 
   return (
     <div
-      className={`flex h-screen overflow-hidden ${isEmptyState ? "bg-[#FCF9F3]" : "bg-secondary"}`}
+      className="flex h-screen overflow-hidden"
+      style={{ background: "#FAF8FC" }}
     >
-      {/* Sidebar — always shown for both guests and authenticated users, including empty state */}
+      {/* Shell principal — nav Hoy/Chat/Calendario/Aprende/Perfil, compartido con el resto de la app */}
+      <Sidebar />
+      <MobileNav />
+
+      {/* Rail de conversaciones — específico de /chat, se mantiene independiente del nav principal */}
       <aside
         className={`
           fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300
           md:relative md:translate-x-0 md:flex md:flex-col
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
+        style={{
+          background: "#F4F0FA",
+          borderRight: "1px solid rgba(74,45,110,.07)",
+        }}
       >
-        {/* Sidebar header with logo */}
-        <div className="flex items-center gap-2 px-4 py-4 bg-white border-b border-gray-100">
-          <img src="/sello_vinotinto.svg" alt="Lila" className="w-8 h-8" />
-          <span className="font-semibold text-primary text-lg">Lila</span>
-        </div>
-
         <div className="flex-1 overflow-hidden">
           <ConversationList
             conversations={conversations}
@@ -94,14 +98,6 @@ function ChatPage() {
             isAuthenticated={!!token}
           />
         </div>
-
-        <AccountBanner
-          email={email}
-          name={name}
-          picture={picture}
-          isAuthenticated={!!token}
-          onLogout={logout}
-        />
       </aside>
 
       {/* Mobile sidebar overlay backdrop */}
@@ -116,18 +112,40 @@ function ChatPage() {
       <div className="flex flex-col flex-1 min-w-0">
         {/* Header — hidden during empty state (EmptyState has its own wordmark + mobile menu) */}
         {!isEmptyState && (
-          <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 shrink-0">
+          <header
+            className="flex items-center gap-3 px-4 py-3 shrink-0"
+            style={{ borderBottom: "1px solid rgba(74,45,110,.05)" }}
+          >
             <button
               onClick={() => setSidebarOpen((v) => !v)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
+              className="md:hidden p-2 rounded-lg transition-colors"
+              style={{ color: "#6B6377" }}
             >
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-sm font-semibold text-gray-800 truncate">
+              <h1
+                className="text-sm font-semibold truncate"
+                style={{ color: "#2A2530" }}
+              >
                 Chat con Lila
               </h1>
+            </div>
+
+            <div className="hidden md:flex items-center gap-1">
+              <button
+                className="w-9 h-9 rounded-[10px] flex items-center justify-center transition-colors"
+                style={{ color: "#6B6377" }}
+              >
+                <Bell size={19} />
+              </button>
+              <button
+                className="w-9 h-9 rounded-[10px] flex items-center justify-center transition-colors"
+                style={{ color: "#6B6377" }}
+              >
+                <MoreVertical size={19} />
+              </button>
             </div>
           </header>
         )}
@@ -141,7 +159,8 @@ function ChatPage() {
 
         {/* Chat area */}
         <div
-          className={`relative flex-1 overflow-hidden ${isEmptyState ? "bg-[#FCF9F3]" : "bg-white"}`}
+          className="relative flex-1 overflow-hidden"
+          style={{ background: "#FAF8FC" }}
         >
           {/* Floating mobile menu button — empty state has its own header without one */}
           {isEmptyState && (

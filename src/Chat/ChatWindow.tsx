@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, KeyboardEvent } from "react";
-import { Send } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import type { ChatMessage } from "@/api/lila";
 import MessageBubble from "./MessageBubble";
 import EmptyState from "@/components/EmptyState";
@@ -20,28 +20,28 @@ function TypingIndicator() {
         className="w-7 h-7 rounded-full shrink-0"
       />
       <div
-        className="rounded-[20px] rounded-bl-[6px] px-[18px] py-[15px]"
-        style={{ background: "#EFE6FB" }}
+        className="rounded-[16px] rounded-bl-[4px] px-[18px] py-[15px]"
+        style={{ background: "#fff", border: "1px solid rgba(74,45,110,.07)" }}
       >
         <div className="flex gap-[5px] items-center">
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{
-              background: "#C4A8F0",
+              background: "#B9A3E3",
               animation: "lilaWDot 1.2s infinite ease-in-out",
             }}
           />
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{
-              background: "#C4A8F0",
+              background: "#B9A3E3",
               animation: "lilaWDot 1.2s 0.18s infinite ease-in-out",
             }}
           />
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{
-              background: "#C4A8F0",
+              background: "#B9A3E3",
               animation: "lilaWDot 1.2s 0.36s infinite ease-in-out",
             }}
           />
@@ -100,7 +100,7 @@ function ChatWindow({
       {/* Messages area */}
       <div
         className="flex-1 overflow-y-auto px-[18px] py-2"
-        style={{ background: "#FDFBF3" }}
+        style={{ background: "#FAF8FC" }}
       >
         {messages.map((msg, i) => (
           <MessageBubble key={i} message={msg} />
@@ -114,18 +114,28 @@ function ChatWindow({
       {/* Input area */}
       <div
         className="px-4 py-3"
-        style={{ background: "#FDFBF3", borderTop: "1px solid #EFE6DA" }}
+        style={{
+          background: "#FAF8FC",
+          borderTop: "1px solid rgba(74,45,110,.05)",
+        }}
       >
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleSend();
           }}
-          className="flex items-center gap-[10px] rounded-[24px] border bg-white px-[22px] py-2 pr-2"
+          className="flex items-center gap-2 rounded-[26px] bg-white px-2 py-2 pl-[22px] transition-[border-color] duration-150"
           style={{
-            border: "1px solid #EFE6DA",
-            boxShadow: "0 10px 30px -12px rgba(59,23,64,0.18)",
+            border: "1.5px solid transparent",
+            boxShadow: "0 2px 16px rgba(74,45,110,.08)",
             fontFamily: "'Poppins', system-ui, sans-serif",
+          }}
+          onFocus={(e) => {
+            (e.currentTarget as HTMLFormElement).style.borderColor = "#B9A3E3";
+          }}
+          onBlur={(e) => {
+            (e.currentTarget as HTMLFormElement).style.borderColor =
+              "transparent";
           }}
         >
           <textarea
@@ -135,7 +145,7 @@ function ChatWindow({
             placeholder="Escríbeme..."
             rows={1}
             disabled={isLoading}
-            className="flex-1 resize-none bg-transparent text-[16px] text-[#3B1740] placeholder:text-[#5C3564]/60 outline-none disabled:opacity-50 max-h-32 overflow-y-auto"
+            className="flex-1 resize-none bg-transparent text-[15px] text-[#2A2530] placeholder:text-[#9B93A6] outline-none disabled:opacity-50 max-h-32 overflow-y-auto"
             style={{
               border: "none",
               padding: "11px 0",
@@ -147,33 +157,23 @@ function ChatWindow({
             type="submit"
             disabled={!input.trim() || isLoading}
             aria-label="Enviar"
-            className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[16px] disabled:opacity-40"
+            className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full disabled:opacity-40 transition-transform duration-150"
             style={{
-              background: "#C4A8F0",
+              background: "#4A2D6E",
               border: "none",
-              borderBottom: "4px solid #B294DF",
-              transform: "translateY(0)",
-              transition: "transform 0.08s ease",
+              boxShadow: "0 3px 10px rgba(74,45,110,.28)",
               cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
             }}
-            onMouseDown={(e) => {
+            onMouseEnter={(e) => {
               if (!input.trim() || isLoading) return;
-              const el = e.currentTarget;
-              el.style.transform = "translateY(2px)";
-              el.style.borderBottomWidth = "1px";
-            }}
-            onMouseUp={(e) => {
-              const el = e.currentTarget;
-              el.style.transform = "translateY(0)";
-              el.style.borderBottomWidth = "4px";
+              (e.currentTarget as HTMLButtonElement).style.transform =
+                "scale(1.06)";
             }}
             onMouseLeave={(e) => {
-              const el = e.currentTarget;
-              el.style.transform = "translateY(0)";
-              el.style.borderBottomWidth = "4px";
+              (e.currentTarget as HTMLButtonElement).style.transform = "";
             }}
           >
-            <Send size={18} color="#ffffff" />
+            <ArrowUp size={18} color="#ffffff" />
           </button>
         </form>
       </div>
