@@ -110,7 +110,11 @@ function CycleCard({ summary, saving, saveError, saveSuccess, onSave }: CycleCar
           style={{ background: "#EEF2E1" }}
         >
           <Info size={17} color="#7A9142" className="shrink-0 mt-0.5" />
-          <div className="text-[13.5px] leading-relaxed" style={{ color: "#4d5c30" }}>
+          <div
+            data-testid="cycle-info-banner"
+            className="text-[13.5px] leading-relaxed"
+            style={{ color: "#4d5c30" }}
+          >
             Lila usa estos datos para predecir tu ventana fértil y picos de energía.
           </div>
         </div>

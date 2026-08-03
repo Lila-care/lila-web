@@ -563,6 +563,58 @@ test.describe("Responsive 768px — DataPrivacyCard no se comprime con el sideba
   });
 });
 
+test.describe("Responsive 768px — CycleCard no comprime el aviso de 'Tu ciclo' con el sidebar real", () => {
+  // Regression test for: a 768px, el grid `md:grid-cols-2` de PerfilPage (index.tsx) partía
+  // "Tu ciclo" y "Notificaciones" en dos columnas en el mismo breakpoint (`md`) en que el
+  // Sidebar fijo (~248px, `hidden md:flex`) y el `md:px-16` del <main> también se activan —
+  // igual que el bug ya arreglado en DataPrivacyCard. Eso dejaba la columna de CycleCard en
+  // ~184px reales, y el div del aviso verde (sin flex-basis propio, dentro de un flex con el
+  // ícono Info) se renderizaba en ~65px, prácticamente su ancho min-content (la palabra más
+  // larga) — el texto se envolvía casi palabra por palabra. Fix: el grid de PerfilPage pasa a
+  // `lg:grid-cols-2` (1024px) en vez de `md:grid-cols-2`, así que a 768px "Tu ciclo" ocupa el
+  // ancho completo del <main> (apilado sobre "Notificaciones"), con espacio de sobra para el
+  // aviso. Este test navega /perfil completo (Sidebar real vía AppShell), no CycleCard en
+  // aislamiento — así es como QA reprodujo el bug.
+  test("el aviso 'Lila usa estos datos...' no se envuelve en columnas de una palabra a 768px", async ({
+    page,
+  }) => {
+    const token = fakeIdToken();
+    await mockAuthenticatedShell(page);
+    await seedAuthToken(page, token);
+
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto(`${BASE_URL}/perfil`);
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("app-sidebar")).toBeVisible();
+
+    const cycleCard = page.getByTestId("cycle-card");
+    await expect(cycleCard).toBeVisible();
+
+    const infoBanner = page.getByTestId("cycle-info-banner");
+    await expect(infoBanner).toBeVisible();
+    const box = await infoBanner.evaluate((el) => ({
+      width: (el as HTMLElement).clientWidth,
+      height: (el as HTMLElement).clientHeight,
+    }));
+    // El aviso tiene ~75 caracteres a 13.5px — un ancho por debajo de ~150px solo es posible
+    // si está envolviendo casi palabra por palabra (compresión de la columna), no por su
+    // layout normal. En el layout arreglado (grid de 1 columna a 768px), el aviso ocupa el
+    // ancho completo del <main> (varios cientos de px).
+    expect(box.width).toBeGreaterThan(150);
+    // Con ese ancho, dos líneas de ~13.5px/relaxed line-height alcanzan para el texto completo
+    // — una compresión palabra-por-palabra produciría muchas más líneas y una altura
+    // desproporcionada.
+    expect(box.height).toBeLessThan(80);
+
+    // Sin overflow horizontal a 768px tampoco.
+    const hasOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(hasOverflow).toBe(false);
+  });
+});
+
 test.describe("Responsive 375px — sin overflow horizontal", () => {
   const routes = ["/hoy", "/chat", "/calendario", "/aprende", "/perfil", "/perfil/privacidad"];
 
