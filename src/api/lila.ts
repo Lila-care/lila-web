@@ -35,10 +35,25 @@ export interface UpdateTemplateDto {
 
 export type ProfileTier = "bienestar" | "clinico";
 
+export interface ReconciliationQuestion {
+  questionId: string;
+  text: string;
+  answerText: string;
+}
+
+export interface ReconciliationData {
+  formId: string;
+  questions: ReconciliationQuestion[];
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  // Only set for the special seed message that renders `ReconciliationCard` instead of
+  // Markdown — see `MessageBubble.tsx`. Absent on every regular chat message.
+  kind?: "reconciliation";
+  data?: ReconciliationData;
 }
 
 export interface ChatResponse {
@@ -96,6 +111,9 @@ export interface UserAgent {
   hasActiveTemplate: boolean;
   freeQuestionLimit: number;
   onboarding: OnboardingStatus;
+  // Only populated on the account's first sign-in, when a completed guest `FormProgress`
+  // was pending reconciliation. Mutually exclusive with `onboarding.pending` in practice.
+  reconciliation?: ReconciliationData;
 }
 
 export interface MigrateGuestResponse {
@@ -259,6 +277,21 @@ export async function migrateGuest(
     body: JSON.stringify({ guestId }),
   });
   return handleResponse<MigrateGuestResponse>(res);
+}
+
+export async function reconcileOnboarding(
+  token: string,
+  payload: {
+    formId: string;
+    answers: { questionId: string; answerText: string }[];
+  },
+): Promise<{ success: boolean }> {
+  const res = await authFetch(`${BASE_URL}/lila/onboarding/reconcile`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<{ success: boolean }>(res);
 }
 
 export async function getConfig(): Promise<LilaConfig> {

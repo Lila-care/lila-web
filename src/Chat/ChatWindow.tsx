@@ -9,6 +9,10 @@ interface ChatWindowProps {
   isLoading: boolean;
   onSend: (text: string) => void;
   onboardingPending?: boolean;
+  onConfirmReconciliation?: (
+    formId: string,
+    answers: { questionId: string; answerText: string }[],
+  ) => Promise<void>;
 }
 
 function TypingIndicator() {
@@ -62,6 +66,7 @@ function ChatWindow({
   isLoading,
   onSend,
   onboardingPending = false,
+  onConfirmReconciliation,
 }: ChatWindowProps) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -103,7 +108,11 @@ function ChatWindow({
         style={{ background: "#FAF8FC" }}
       >
         {messages.map((msg, i) => (
-          <MessageBubble key={i} message={msg} />
+          <MessageBubble
+            key={i}
+            message={msg}
+            onConfirmReconciliation={onConfirmReconciliation}
+          />
         ))}
 
         {isLoading && <TypingIndicator />}

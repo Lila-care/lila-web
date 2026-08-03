@@ -32,6 +32,7 @@ function ChatPage() {
     sendMessage,
     loadConversation,
     startNewConversation,
+    confirmReconciliation,
   } = useLilaChat();
 
   // Load conversations list on mount (only for authenticated users)
@@ -184,6 +185,7 @@ function ChatPage() {
               isLoading={isLoading}
               onSend={sendMessage}
               onboardingPending={onboardingPending}
+              onConfirmReconciliation={confirmReconciliation}
             />
           )}
         </div>

@@ -5,6 +5,7 @@ import {
   getConversation,
   getConfig,
   getAgentMe,
+  reconcileOnboarding,
 } from "@/api/lila";
 import type { ChatMessage } from "@/api/lila";
 import { getGuestId } from "@/lib/guest";
@@ -30,6 +31,10 @@ interface UseLilaChatReturn {
   sendMessage: (text: string) => Promise<void>;
   loadConversation: (id: string) => Promise<void>;
   startNewConversation: () => void;
+  confirmReconciliation: (
+    formId: string,
+    answers: { questionId: string; answerText: string }[],
+  ) => Promise<void>;
 }
 
 export function useLilaChat(): UseLilaChatReturn {
@@ -72,6 +77,27 @@ export function useLilaChat(): UseLilaChatReturn {
 
     refreshAgentMe()
       .then((agent) => {
+        // Reconciliation takes priority over the plain-text onboarding greeting — the backend
+        // shouldn't send both, but if it did, the pending guest form review always wins. Seeded
+        // only while the conversation is still empty, same guard as the greeting below.
+        if (agent.reconciliation) {
+          const { formId, questions } = agent.reconciliation;
+          setMessages((prev) =>
+            prev.length === 0
+              ? [
+                  {
+                    role: "assistant",
+                    content: "Antes de seguir, revisemos lo que ya nos contaste.",
+                    timestamp: new Date().toISOString(),
+                    kind: "reconciliation",
+                    data: { formId, questions },
+                  },
+                ]
+              : prev,
+          );
+          return;
+        }
+
         // Seed the greeting as the first assistant message only when the conversation is
         // still empty — avoids re-injecting it after the user has already started typing or
         // after loading an existing conversation.
@@ -207,6 +233,21 @@ export function useLilaChat(): UseLilaChatReturn {
     setError(null);
   }, []);
 
+  // Reconciliation only ever appears for a signed-in first-login (see `agent.reconciliation`
+  // above) — a guest session has no token to authorize the endpoint with.
+  const confirmReconciliation = useCallback(
+    async (
+      formId: string,
+      answers: { questionId: string; answerText: string }[],
+    ) => {
+      if (!token) {
+        throw new Error("Necesitas iniciar sesión para confirmar tus respuestas.");
+      }
+      await reconcileOnboarding(token, { formId, answers });
+    },
+    [token],
+  );
+
   return {
     messages,
     conversationId,
@@ -225,5 +266,6 @@ export function useLilaChat(): UseLilaChatReturn {
     sendMessage: send,
     loadConversation,
     startNewConversation,
+    confirmReconciliation,
   };
 }
