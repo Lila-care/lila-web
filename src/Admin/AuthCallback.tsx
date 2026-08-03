@@ -77,8 +77,14 @@ function AuthCallback() {
           id_token: string;
           access_token: string;
           refresh_token: string;
+          expires_in: number;
         }) => {
-          login(data.id_token);
+          login({
+            idToken: data.id_token,
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expiresIn: data.expires_in,
+          });
           localStorage.removeItem("lila_anon_count");
           const existingGuestId = readExistingGuestId();
           if (existingGuestId) {

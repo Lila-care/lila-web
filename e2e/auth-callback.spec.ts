@@ -27,6 +27,7 @@ test.describe("AuthCallback — token exchange runs once per code (StrictMode sa
           id_token: fakeIdToken(),
           access_token: "fake-access-token",
           refresh_token: "fake-refresh-token",
+          expires_in: 3600,
         }),
       });
     });

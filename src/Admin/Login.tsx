@@ -61,7 +61,7 @@ function Login() {
         });
         return;
       }
-      login((result as AuthTokens).idToken);
+      login(result as AuthTokens);
       navigate("/admin/dashboard");
     } catch {
       setError("Credenciales inválidas. Verifica tu correo y contraseña.");
