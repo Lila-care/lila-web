@@ -148,19 +148,21 @@ export async function sendMessage(
   body: { message: string; conversationId?: string },
   guestId?: string,
 ): Promise<ChatResponse> {
-  let headers: Record<string, string>;
-  if (token) {
-    headers = authHeaders(token);
-  } else if (guestId) {
-    headers = { ...jsonHeaders(), "x-guest-id": guestId };
-  } else {
-    headers = jsonHeaders();
-  }
-  const res = await fetch(`${BASE_URL}/lila/chat`, {
+  const url = `${BASE_URL}/lila/chat`;
+  const requestInit: RequestInit = {
     method: "POST",
-    headers,
     body: JSON.stringify(body),
-  });
+  };
+  // Only authenticated calls go through `authFetch` — guest requests carry no idToken to
+  // refresh, and routing them through it risks picking up a stale token left in localStorage.
+  const res = token
+    ? await authFetch(url, { ...requestInit, headers: authHeaders(token) })
+    : await fetch(url, {
+        ...requestInit,
+        headers: guestId
+          ? { ...jsonHeaders(), "x-guest-id": guestId }
+          : jsonHeaders(),
+      });
   return handleResponse<ChatResponse>(res);
 }
 
@@ -255,15 +257,20 @@ export async function getAgentMe(
   token: string | null,
   guestId?: string,
 ): Promise<UserAgent> {
+  const url = `${BASE_URL}/lila/agent/me`;
+  // Same split as `sendMessage`: authenticated calls go through `authFetch` for refresh-on-401;
+  // guest calls (no idToken to refresh) stay on plain `fetch` with the `x-guest-id` header.
+  if (token) {
+    const res = await authFetch(url, { headers: authHeaders(token) });
+    return handleResponse<UserAgent>(res);
+  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  } else if (guestId) {
+  if (guestId) {
     headers["x-guest-id"] = guestId;
   }
-  const res = await fetch(`${BASE_URL}/lila/agent/me`, { headers });
+  const res = await fetch(url, { headers });
   return handleResponse<UserAgent>(res);
 }
 

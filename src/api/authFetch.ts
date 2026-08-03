@@ -37,24 +37,39 @@ function forceLogoutRedirect() {
   }
 }
 
+// Concurrent 401s (e.g. several authFetch calls firing on the same mount) must share a single
+// refresh instead of each firing their own `/auth/refresh` — without this, they race each other
+// and, if the backend ever rotates refresh tokens, only the first one to land would succeed.
+let refreshInFlight: Promise<string | null> | null = null;
+
 async function refreshTokens(): Promise<string | null> {
-  const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!storedRefreshToken) return null;
+  if (refreshInFlight) return refreshInFlight;
 
-  const res = await fetch(`${BASE_URL}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken: storedRefreshToken }),
-  });
+  refreshInFlight = (async () => {
+    const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!storedRefreshToken) return null;
 
-  if (!res.ok) return null;
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: storedRefreshToken }),
+    });
 
-  const data = (await res.json()) as RefreshResponse;
-  const expiresAt = Date.now() + data.expiresIn * 1000;
-  localStorage.setItem(TOKEN_KEY, data.idToken);
-  localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-  localStorage.setItem(EXPIRES_AT_KEY, String(expiresAt));
-  return data.idToken;
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as RefreshResponse;
+    const expiresAt = Date.now() + data.expiresIn * 1000;
+    localStorage.setItem(TOKEN_KEY, data.idToken);
+    localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+    localStorage.setItem(EXPIRES_AT_KEY, String(expiresAt));
+    return data.idToken;
+  })();
+
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
 }
 
 function withAuthHeader(
