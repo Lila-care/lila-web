@@ -22,9 +22,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn playwright install --with-deps chromium
+      - run: yarn test:e2e
         env:
           VITE_AUTH_DOMAIN: https://lila-app-dev.auth.us-east-1.amazoncognito.com
           VITE_CLIENT_ID: e2e-test-client-id
