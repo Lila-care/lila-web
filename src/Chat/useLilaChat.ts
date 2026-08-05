@@ -77,9 +77,11 @@ export function useLilaChat(): UseLilaChatReturn {
 
     refreshAgentMe()
       .then((agent) => {
-        // Reconciliation takes priority over the plain-text onboarding greeting — the backend
-        // shouldn't send both, but if it did, the pending guest form review always wins. Seeded
-        // only while the conversation is still empty, same guard as the greeting below.
+        // Priority order (most to least specific): reconciliation > activeConversation >
+        // generic greeting. Reconciliation only ever fires post-login with onboarding already
+        // completed before, so it can't collide with an in-progress onboarding conversation in
+        // practice — but if the backend ever sent both, the pending guest form review still wins.
+        // Seeded only while the conversation is still empty, same guard as the branches below.
         if (agent.reconciliation) {
           const { formId, questions } = agent.reconciliation;
           setMessages((prev) =>
@@ -94,6 +96,32 @@ export function useLilaChat(): UseLilaChatReturn {
                   },
                 ]
               : prev,
+          );
+          return;
+        }
+
+        // Resume mid-onboarding conversations (guest or authenticated) exactly as they were
+        // left on the backend — takes priority over the generic first-question greeting below,
+        // since re-showing that greeting on top of a real, already-in-progress exchange is what
+        // caused the resume bug (a guest reload showed the first-question greeting again, and
+        // her next answer got misinterpreted against the wrong question).
+        if (
+          agent.activeConversation &&
+          agent.activeConversation.messages.length > 0
+        ) {
+          const restored: ChatMessage[] = agent.activeConversation.messages.map(
+            (m) => ({
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp,
+            }),
+          );
+          setMessages((prev) => (prev.length === 0 ? restored : prev));
+          // Functional update: only claim the restored conversationId if the user hasn't
+          // already started (and gotten a real one from) a new exchange in the race window
+          // before this async response came back.
+          setConversationId(
+            (prev) => prev ?? agent.activeConversation!.conversationId,
           );
           return;
         }

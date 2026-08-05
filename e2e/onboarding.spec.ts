@@ -24,6 +24,41 @@ function agentMeBody(overrides: {
   };
 }
 
+const ACTIVE_CONVERSATION_DATA = {
+  conversationId: "conv-mid-onboarding",
+  messages: [
+    {
+      role: "assistant" as const,
+      content: "¡Hola! Antes de empezar, cuéntame un poco sobre ti.",
+      timestamp: "2026-08-05T10:00:00.000Z",
+    },
+    {
+      role: "user" as const,
+      content: "Tengo 28 años",
+      timestamp: "2026-08-05T10:00:05.000Z",
+    },
+    {
+      role: "assistant" as const,
+      content: "¡Genial! ¿Tomas anticonceptivos actualmente?",
+      timestamp: "2026-08-05T10:00:10.000Z",
+    },
+  ],
+};
+
+function agentMeActiveConversationBody(
+  activeConversation: typeof ACTIVE_CONVERSATION_DATA,
+) {
+  return {
+    userId: "test-guest",
+    templateVersion: 1,
+    isGuest: true,
+    hasActiveTemplate: true,
+    freeQuestionLimit: 3,
+    onboarding: { pending: true },
+    activeConversation,
+  };
+}
+
 const RECONCILIATION_DATA = {
   formId: "form-123",
   questions: [
@@ -32,7 +67,10 @@ const RECONCILIATION_DATA = {
   ],
 };
 
-function agentMeReconciliationBody(reconciliation: typeof RECONCILIATION_DATA) {
+function agentMeReconciliationBody(
+  reconciliation: typeof RECONCILIATION_DATA,
+  activeConversation?: typeof ACTIVE_CONVERSATION_DATA,
+) {
   return {
     userId: "test-user",
     templateVersion: 1,
@@ -41,6 +79,7 @@ function agentMeReconciliationBody(reconciliation: typeof RECONCILIATION_DATA) {
     freeQuestionLimit: 3,
     onboarding: { pending: false },
     reconciliation,
+    ...(activeConversation ? { activeConversation } : {}),
   };
 }
 
@@ -166,6 +205,90 @@ test.describe("Onboarding flow", () => {
     await expect(page.getByTestId("account-avatar-initials")).toBeVisible();
     await expect(page.getByTestId("account-avatar-initials")).toHaveText("AN");
     await expect(page.getByTestId("account-name")).toHaveText("Ana Torres");
+  });
+});
+
+test.describe("Onboarding resume (activeConversation)", () => {
+  test("guest a mitad de onboarding recarga la página y ve su conversación real, no el saludo genérico", async ({
+    page,
+  }) => {
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(
+        route,
+        agentMeActiveConversationBody(ACTIVE_CONVERSATION_DATA),
+      ),
+    );
+
+    await page.goto(`${BASE_URL}/chat`);
+
+    const bubbles = page.getByTestId("message-bubble");
+    await expect(bubbles).toHaveCount(ACTIVE_CONVERSATION_DATA.messages.length);
+    for (const [i, message] of ACTIVE_CONVERSATION_DATA.messages.entries()) {
+      await expect(bubbles.nth(i)).toHaveAttribute("data-role", message.role);
+      await expect(bubbles.nth(i)).toContainText(message.content);
+    }
+
+    // The generic first-question greeting must not be re-seeded on top of the restored
+    // conversation — its text isn't part of ACTIVE_CONVERSATION_DATA at all.
+    await expect(
+      page.getByText("¡Hola! Antes de empezar, cuéntame un poco sobre ti."),
+    ).toHaveCount(1); // only the restored copy, already asserted above — not a second seed
+    await expect(page.getByTestId("empty-state")).toHaveCount(0);
+  });
+
+  test("sin activeConversation, el saludo genérico se sigue sembrando igual (no regresión)", async ({
+    page,
+  }) => {
+    const greeting = "¡Hola! Antes de empezar, cuéntame un poco sobre ti.";
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(
+        route,
+        agentMeBody({ onboardingPending: true, greetingMessage: greeting }),
+      ),
+    );
+
+    await page.goto(`${BASE_URL}/chat`);
+
+    const bubbles = page.getByTestId("message-bubble");
+    await expect(bubbles).toHaveCount(1);
+    await expect(bubbles.first()).toHaveAttribute("data-role", "assistant");
+    await expect(bubbles.first()).toContainText(greeting);
+  });
+
+  test("reconciliation tiene prioridad sobre activeConversation si el backend enviara ambos", async ({
+    page,
+  }) => {
+    const token = fakeIdToken({
+      email: "prioridad@lila.app",
+      name: "Prioridad Test",
+    });
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(
+        route,
+        agentMeReconciliationBody(RECONCILIATION_DATA, ACTIVE_CONVERSATION_DATA),
+      ),
+    );
+    await page.route(`${API_URL}/lila/conversations`, (route) =>
+      fulfillJson(route, []),
+    );
+
+    await seedAuthToken(page, token);
+    await page.goto(`${BASE_URL}/chat`);
+
+    await expect(page.getByTestId("reconciliation-card")).toBeVisible();
+    // None of the restored activeConversation messages should render — reconciliation wins.
+    await expect(page.getByTestId("message-bubble")).toHaveCount(0);
   });
 });
 

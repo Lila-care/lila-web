@@ -104,6 +104,17 @@ export interface OnboardingStatus {
   greetingMessage?: string;
 }
 
+export interface ActiveConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+}
+
+export interface ActiveConversation {
+  conversationId: string;
+  messages: ActiveConversationMessage[];
+}
+
 export interface UserAgent {
   userId: string;
   templateVersion: number;
@@ -114,6 +125,10 @@ export interface UserAgent {
   // Only populated on the account's first sign-in, when a completed guest `FormProgress`
   // was pending reconciliation. Mutually exclusive with `onboarding.pending` in practice.
   reconciliation?: ReconciliationData;
+  // Only populated when an onboarding conversation is already in progress (guest or
+  // authenticated) with at least 1 message exchanged — lets the FE restore the real
+  // conversation on reload instead of re-seeding the generic first-question greeting.
+  activeConversation?: ActiveConversation;
 }
 
 export interface MigrateGuestResponse {
