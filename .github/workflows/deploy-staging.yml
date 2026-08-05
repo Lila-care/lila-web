@@ -13,8 +13,27 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          VITE_AUTH_DOMAIN: https://lila-app-dev.auth.us-east-1.amazoncognito.com
+          VITE_CLIENT_ID: e2e-test-client-id
+          VITE_REDIRECT_URI: http://localhost:5173/auth/callback
+          VITE_API_URL: http://localhost:6100
+
   deploy-staging:
     if: github.event.label.name == 'staging'
+    needs: test
     runs-on: ubuntu-latest
     environment: staging
 

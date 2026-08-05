@@ -2,7 +2,7 @@ import selloLila from "/sello_vinotinto.svg";
 
 const handleGoogleLogin = () => {
   const domain = import.meta.env.VITE_AUTH_DOMAIN;
-  const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
+  const clientId = import.meta.env.VITE_CLIENT_ID;
   const redirectUri = import.meta.env.VITE_REDIRECT_URI;
 
   const params = new URLSearchParams({
@@ -13,6 +13,7 @@ const handleGoogleLogin = () => {
     scope: "openid email profile",
   });
 
+  sessionStorage.setItem("lila_login_origin", "/login");
   window.location.assign(`${domain}/oauth2/authorize?${params.toString()}`);
 };
 

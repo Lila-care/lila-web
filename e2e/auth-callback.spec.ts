@@ -5,6 +5,7 @@ const API_URL = process.env.VITE_API_URL ?? "http://localhost:6100";
 const AUTH_DOMAIN =
   process.env.VITE_AUTH_DOMAIN ??
   "https://lila-app-dev.auth.us-east-1.amazoncognito.com";
+const CLIENT_ID = process.env.VITE_CLIENT_ID ?? "e2e-test-client-id";
 
 // Regression test for: the OAuth code exchange effect in AuthCallback.tsx used to run more
 // than once per authorization code (React.StrictMode double-invoke in dev, plus `login`/
@@ -49,6 +50,85 @@ test.describe("AuthCallback — token exchange runs once per code (StrictMode sa
     await expect(page.getByText("Error al iniciar sesión")).toHaveCount(0);
 
     expect(tokenExchangeCount).toBe(1);
+  });
+});
+
+// Regression test for two bugs reported together in staging:
+//   1. UserLogin.tsx (/login) built its /oauth2/authorize redirect using the env var
+//      VITE_COGNITO_CLIENT_ID, while AuthCallback.tsx (the single handler for
+//      /auth/callback, shared by /login and /admin) always exchanged the code using
+//      VITE_CLIENT_ID. In staging only VITE_CLIENT_ID was kept up to date, so the
+//      authorize request and the token exchange disagreed on client_id and Cognito
+//      rejected the exchange for every normal-user login. Fix: UserLogin.tsx now reads
+//      VITE_CLIENT_ID too, the same var Admin/Login.tsx already used.
+//   2. The error branch's "Volver al inicio" link was hardcoded to /admin. Combined with
+//      bug 1, every failed /login attempt sent the user to the ADMIN login instead of back
+//      to the public one. Fix: the origin (/login or /admin) is now stashed in
+//      sessionStorage right before the redirect to Cognito and read back in AuthCallback.
+test.describe("AuthCallback — vuelve al origen correcto tras un login fallido", () => {
+  test("originado en /login: el authorize request usa VITE_CLIENT_ID y el link de error vuelve a /login", async ({
+    page,
+  }) => {
+    await page.route(`${AUTH_DOMAIN}/oauth2/authorize**`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<html></html>",
+      }),
+    );
+
+    await page.goto(`${BASE_URL}/login`);
+    await page.getByText("Continuar con Google").click();
+    await page.waitForURL(`${AUTH_DOMAIN}/oauth2/authorize**`);
+
+    const authorizeUrl = new URL(page.url());
+    expect(authorizeUrl.searchParams.get("client_id")).toBe(CLIENT_ID);
+
+    await page.route(`${AUTH_DOMAIN}/oauth2/token`, (route) =>
+      route.fulfill({
+        status: 400,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "invalid_grant" }),
+      }),
+    );
+
+    await page.goto(`${BASE_URL}/auth/callback?code=e2e-fake-auth-code-login`);
+
+    await expect(page.getByText("Error al iniciar sesión")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Volver al inicio" }),
+    ).toHaveAttribute("href", "/login");
+  });
+
+  test("no-regresión — originado en /admin: el link de error sigue apuntando a /admin", async ({
+    page,
+  }) => {
+    await page.route(`${AUTH_DOMAIN}/oauth2/authorize**`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<html></html>",
+      }),
+    );
+
+    await page.goto(`${BASE_URL}/admin`);
+    await page.getByText("Continuar con Google").click();
+    await page.waitForURL(`${AUTH_DOMAIN}/oauth2/authorize**`);
+
+    await page.route(`${AUTH_DOMAIN}/oauth2/token`, (route) =>
+      route.fulfill({
+        status: 400,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "invalid_grant" }),
+      }),
+    );
+
+    await page.goto(`${BASE_URL}/auth/callback?code=e2e-fake-auth-code-admin`);
+
+    await expect(page.getByText("Error al iniciar sesión")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Volver al inicio" }),
+    ).toHaveAttribute("href", "/admin");
   });
 });
 

@@ -32,6 +32,7 @@ const handleGoogleLogin = () => {
 
   const url = `${domain}/oauth2/authorize?${params.toString()}`;
   console.log("[Login] URL construida:", url);
+  sessionStorage.setItem("lila_login_origin", "/admin");
   window.location.assign(url);
 };
 
