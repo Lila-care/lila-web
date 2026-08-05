@@ -15,10 +15,20 @@ function AuthCallback() {
   // Guard so the exchange (+ guest migration) fires exactly once per mount, regardless of
   // how many times the effect re-runs.
   const hasRunRef = useRef(false);
+  // Set by UserLogin.tsx (/login) or Admin/Login.tsx (/admin) right before redirecting to
+  // Cognito's hosted UI — this is the only handler for /auth/callback, shared by both flows,
+  // so it can't otherwise tell which one the user came from. Read once per mount and cleared
+  // immediately so a repeated flow never sees stale state; defaults to /login, the public
+  // flow, rather than /admin.
+  const loginOriginRef = useRef("/login");
 
   useEffect(() => {
     if (hasRunRef.current) return;
     hasRunRef.current = true;
+
+    loginOriginRef.current =
+      sessionStorage.getItem("lila_login_origin") ?? "/login";
+    sessionStorage.removeItem("lila_login_origin");
 
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
@@ -116,7 +126,10 @@ function AuthCallback() {
         <div className="bg-white shadow-lg rounded-2xl p-10 w-full max-w-md text-center space-y-4">
           <p className="text-red-600 font-medium">Error al iniciar sesión</p>
           <p className="text-gray-500 text-sm">{error}</p>
-          <a href="/admin" className="text-primary underline text-sm">
+          <a
+            href={loginOriginRef.current}
+            className="text-primary underline text-sm"
+          >
             Volver al inicio
           </a>
         </div>
