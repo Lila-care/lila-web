@@ -5,6 +5,7 @@ import {
   getConversation,
   getConfig,
   getAgentMe,
+  reconcileOnboarding,
 } from "@/api/lila";
 import type { ChatMessage } from "@/api/lila";
 import { getGuestId } from "@/lib/guest";
@@ -30,6 +31,10 @@ interface UseLilaChatReturn {
   sendMessage: (text: string) => Promise<void>;
   loadConversation: (id: string) => Promise<void>;
   startNewConversation: () => void;
+  confirmReconciliation: (
+    formId: string,
+    answers: { questionId: string; answerText: string }[],
+  ) => Promise<void>;
 }
 
 export function useLilaChat(): UseLilaChatReturn {
@@ -72,6 +77,55 @@ export function useLilaChat(): UseLilaChatReturn {
 
     refreshAgentMe()
       .then((agent) => {
+        // Priority order (most to least specific): reconciliation > activeConversation >
+        // generic greeting. Reconciliation only ever fires post-login with onboarding already
+        // completed before, so it can't collide with an in-progress onboarding conversation in
+        // practice — but if the backend ever sent both, the pending guest form review still wins.
+        // Seeded only while the conversation is still empty, same guard as the branches below.
+        if (agent.reconciliation) {
+          const { formId, questions } = agent.reconciliation;
+          setMessages((prev) =>
+            prev.length === 0
+              ? [
+                  {
+                    role: "assistant",
+                    content: "Antes de seguir, revisemos lo que ya nos contaste.",
+                    timestamp: new Date().toISOString(),
+                    kind: "reconciliation",
+                    data: { formId, questions },
+                  },
+                ]
+              : prev,
+          );
+          return;
+        }
+
+        // Resume mid-onboarding conversations (guest or authenticated) exactly as they were
+        // left on the backend — takes priority over the generic first-question greeting below,
+        // since re-showing that greeting on top of a real, already-in-progress exchange is what
+        // caused the resume bug (a guest reload showed the first-question greeting again, and
+        // her next answer got misinterpreted against the wrong question).
+        if (
+          agent.activeConversation &&
+          agent.activeConversation.messages.length > 0
+        ) {
+          const restored: ChatMessage[] = agent.activeConversation.messages.map(
+            (m) => ({
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp,
+            }),
+          );
+          setMessages((prev) => (prev.length === 0 ? restored : prev));
+          // Functional update: only claim the restored conversationId if the user hasn't
+          // already started (and gotten a real one from) a new exchange in the race window
+          // before this async response came back.
+          setConversationId(
+            (prev) => prev ?? agent.activeConversation!.conversationId,
+          );
+          return;
+        }
+
         // Seed the greeting as the first assistant message only when the conversation is
         // still empty — avoids re-injecting it after the user has already started typing or
         // after loading an existing conversation.
@@ -207,6 +261,21 @@ export function useLilaChat(): UseLilaChatReturn {
     setError(null);
   }, []);
 
+  // Reconciliation only ever appears for a signed-in first-login (see `agent.reconciliation`
+  // above) — a guest session has no token to authorize the endpoint with.
+  const confirmReconciliation = useCallback(
+    async (
+      formId: string,
+      answers: { questionId: string; answerText: string }[],
+    ) => {
+      if (!token) {
+        throw new Error("Necesitas iniciar sesión para confirmar tus respuestas.");
+      }
+      await reconcileOnboarding(token, { formId, answers });
+    },
+    [token],
+  );
+
   return {
     messages,
     conversationId,
@@ -225,5 +294,6 @@ export function useLilaChat(): UseLilaChatReturn {
     sendMessage: send,
     loadConversation,
     startNewConversation,
+    confirmReconciliation,
   };
 }

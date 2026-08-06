@@ -1,8 +1,13 @@
 import ReactMarkdown from "react-markdown";
 import type { ChatMessage } from "@/api/lila";
+import ReconciliationCard from "./ReconciliationCard";
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  onConfirmReconciliation?: (
+    formId: string,
+    answers: { questionId: string; answerText: string }[],
+  ) => Promise<void>;
 }
 
 function formatTime(timestamp: string): string {
@@ -13,8 +18,20 @@ function formatTime(timestamp: string): string {
   });
 }
 
-function MessageBubble({ message }: MessageBubbleProps) {
+function MessageBubble({ message, onConfirmReconciliation }: MessageBubbleProps) {
   const isUser = message.role === "user";
+
+  if (message.kind === "reconciliation" && message.data) {
+    return (
+      <ReconciliationCard
+        data={message.data}
+        onConfirm={
+          onConfirmReconciliation ??
+          (() => Promise.reject(new Error("Reconciliación no disponible.")))
+        }
+      />
+    );
+  }
 
   if (isUser) {
     return (

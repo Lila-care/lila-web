@@ -24,6 +24,65 @@ function agentMeBody(overrides: {
   };
 }
 
+const ACTIVE_CONVERSATION_DATA = {
+  conversationId: "conv-mid-onboarding",
+  messages: [
+    {
+      role: "assistant" as const,
+      content: "¡Hola! Antes de empezar, cuéntame un poco sobre ti.",
+      timestamp: "2026-08-05T10:00:00.000Z",
+    },
+    {
+      role: "user" as const,
+      content: "Tengo 28 años",
+      timestamp: "2026-08-05T10:00:05.000Z",
+    },
+    {
+      role: "assistant" as const,
+      content: "¡Genial! ¿Tomas anticonceptivos actualmente?",
+      timestamp: "2026-08-05T10:00:10.000Z",
+    },
+  ],
+};
+
+function agentMeActiveConversationBody(
+  activeConversation: typeof ACTIVE_CONVERSATION_DATA,
+) {
+  return {
+    userId: "test-guest",
+    templateVersion: 1,
+    isGuest: true,
+    hasActiveTemplate: true,
+    freeQuestionLimit: 3,
+    onboarding: { pending: true },
+    activeConversation,
+  };
+}
+
+const RECONCILIATION_DATA = {
+  formId: "form-123",
+  questions: [
+    { questionId: "q1", text: "¿Cuál es tu edad?", answerText: "28" },
+    { questionId: "q2", text: "¿Tomas anticonceptivos?", answerText: "No" },
+  ],
+};
+
+function agentMeReconciliationBody(
+  reconciliation: typeof RECONCILIATION_DATA,
+  activeConversation?: typeof ACTIVE_CONVERSATION_DATA,
+) {
+  return {
+    userId: "test-user",
+    templateVersion: 1,
+    isGuest: false,
+    hasActiveTemplate: true,
+    freeQuestionLimit: 3,
+    onboarding: { pending: false },
+    reconciliation,
+    ...(activeConversation ? { activeConversation } : {}),
+  };
+}
+
 async function fulfillJson(route: Route, body: unknown) {
   await route.fulfill({
     status: 200,
@@ -146,6 +205,202 @@ test.describe("Onboarding flow", () => {
     await expect(page.getByTestId("account-avatar-initials")).toBeVisible();
     await expect(page.getByTestId("account-avatar-initials")).toHaveText("AN");
     await expect(page.getByTestId("account-name")).toHaveText("Ana Torres");
+  });
+});
+
+test.describe("Onboarding resume (activeConversation)", () => {
+  test("guest a mitad de onboarding recarga la página y ve su conversación real, no el saludo genérico", async ({
+    page,
+  }) => {
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(
+        route,
+        agentMeActiveConversationBody(ACTIVE_CONVERSATION_DATA),
+      ),
+    );
+
+    await page.goto(`${BASE_URL}/chat`);
+
+    const bubbles = page.getByTestId("message-bubble");
+    await expect(bubbles).toHaveCount(ACTIVE_CONVERSATION_DATA.messages.length);
+    for (const [i, message] of ACTIVE_CONVERSATION_DATA.messages.entries()) {
+      await expect(bubbles.nth(i)).toHaveAttribute("data-role", message.role);
+      await expect(bubbles.nth(i)).toContainText(message.content);
+    }
+
+    // The generic first-question greeting must not be re-seeded on top of the restored
+    // conversation — its text isn't part of ACTIVE_CONVERSATION_DATA at all.
+    await expect(
+      page.getByText("¡Hola! Antes de empezar, cuéntame un poco sobre ti."),
+    ).toHaveCount(1); // only the restored copy, already asserted above — not a second seed
+    await expect(page.getByTestId("empty-state")).toHaveCount(0);
+  });
+
+  test("sin activeConversation, el saludo genérico se sigue sembrando igual (no regresión)", async ({
+    page,
+  }) => {
+    const greeting = "¡Hola! Antes de empezar, cuéntame un poco sobre ti.";
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(
+        route,
+        agentMeBody({ onboardingPending: true, greetingMessage: greeting }),
+      ),
+    );
+
+    await page.goto(`${BASE_URL}/chat`);
+
+    const bubbles = page.getByTestId("message-bubble");
+    await expect(bubbles).toHaveCount(1);
+    await expect(bubbles.first()).toHaveAttribute("data-role", "assistant");
+    await expect(bubbles.first()).toContainText(greeting);
+  });
+
+  test("reconciliation tiene prioridad sobre activeConversation si el backend enviara ambos", async ({
+    page,
+  }) => {
+    const token = fakeIdToken({
+      email: "prioridad@lila.app",
+      name: "Prioridad Test",
+    });
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(
+        route,
+        agentMeReconciliationBody(RECONCILIATION_DATA, ACTIVE_CONVERSATION_DATA),
+      ),
+    );
+    await page.route(`${API_URL}/lila/conversations`, (route) =>
+      fulfillJson(route, []),
+    );
+
+    await seedAuthToken(page, token);
+    await page.goto(`${BASE_URL}/chat`);
+
+    await expect(page.getByTestId("reconciliation-card")).toBeVisible();
+    // None of the restored activeConversation messages should render — reconciliation wins.
+    await expect(page.getByTestId("message-bubble")).toHaveCount(0);
+  });
+});
+
+test.describe("Onboarding reconciliation", () => {
+  test("ReconciliationCard aparece en vez del EmptyState cuando agent/me trae reconciliation", async ({
+    page,
+  }) => {
+    const token = fakeIdToken({
+      email: "reconciliar@lila.app",
+      name: "Reconciliar Test",
+    });
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(route, agentMeReconciliationBody(RECONCILIATION_DATA)),
+    );
+    await page.route(`${API_URL}/lila/conversations`, (route) =>
+      fulfillJson(route, []),
+    );
+
+    await seedAuthToken(page, token);
+    await page.goto(`${BASE_URL}/chat`);
+
+    await expect(page.getByTestId("reconciliation-card")).toBeVisible();
+    await expect(page.getByTestId("empty-state")).toHaveCount(0);
+    await expect(
+      page.getByText(RECONCILIATION_DATA.questions[0].text),
+    ).toBeVisible();
+  });
+
+  test("editar una respuesta y confirmar dispara una sola request a /lila/onboarding/reconcile", async ({
+    page,
+  }) => {
+    const token = fakeIdToken({
+      email: "reconciliar2@lila.app",
+      name: "Reconciliar Dos",
+    });
+    let reconcileCallCount = 0;
+    let reconcileBody: unknown = null;
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(route, agentMeReconciliationBody(RECONCILIATION_DATA)),
+    );
+    await page.route(`${API_URL}/lila/conversations`, (route) =>
+      fulfillJson(route, []),
+    );
+    await page.route(`${API_URL}/lila/onboarding/reconcile`, async (route) => {
+      reconcileCallCount += 1;
+      reconcileBody = route.request().postDataJSON();
+      await fulfillJson(route, { success: true });
+    });
+
+    await seedAuthToken(page, token);
+    await page.goto(`${BASE_URL}/chat`);
+
+    await expect(page.getByTestId("reconciliation-card")).toBeVisible();
+
+    const firstQuestionId = RECONCILIATION_DATA.questions[0].questionId;
+    await page
+      .getByTestId(`reconciliation-edit-${firstQuestionId}`)
+      .click();
+    await page
+      .getByTestId(`reconciliation-input-${firstQuestionId}`)
+      .fill("29");
+
+    await page.getByTestId("reconciliation-confirm").click();
+
+    await expect(page.getByTestId("reconciliation-success")).toBeVisible();
+    expect(reconcileCallCount).toBe(1);
+    expect(reconcileBody).toEqual({
+      formId: RECONCILIATION_DATA.formId,
+      answers: [
+        { questionId: "q1", answerText: "29" },
+        { questionId: "q2", answerText: "No" },
+      ],
+    });
+  });
+
+  test("viewport 375px — sin overflow horizontal en el card", async ({
+    page,
+  }) => {
+    const token = fakeIdToken({
+      email: "reconciliar3@lila.app",
+      name: "Reconciliar Tres",
+    });
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(route, agentMeReconciliationBody(RECONCILIATION_DATA)),
+    );
+    await page.route(`${API_URL}/lila/conversations`, (route) =>
+      fulfillJson(route, []),
+    );
+
+    await seedAuthToken(page, token);
+    await page.goto(`${BASE_URL}/chat`);
+
+    await expect(page.getByTestId("reconciliation-card")).toBeVisible();
+
+    const [scrollWidth, clientWidth] = await page.evaluate(() => [
+      document.documentElement.scrollWidth,
+      document.documentElement.clientWidth,
+    ]);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
   });
 });
 

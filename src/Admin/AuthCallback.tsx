@@ -83,7 +83,7 @@ function AuthCallback() {
         return res.json();
       })
       .then(
-        (data: {
+        async (data: {
           id_token: string;
           access_token: string;
           refresh_token: string;
@@ -98,18 +98,24 @@ function AuthCallback() {
           localStorage.removeItem("lila_anon_count");
           const existingGuestId = readExistingGuestId();
           if (existingGuestId) {
-            migrateGuest(data.id_token, existingGuestId)
-              .catch((err: Error) => {
-                // A guest cookie can exist client-side (`crypto.randomUUID()`) without a
-                // matching server-side guest record — that only gets created on the first
-                // guest chat/agent request. Logging in without ever chatting as a guest is
-                // a normal path, not an error: BE returns 404 ("Guest not found") for it.
-                // Only surface unexpected failures to the console.
-                if (!err.message.startsWith("HTTP 404")) {
-                  console.error("[AuthCallback] migrateGuest error:", err);
-                }
-              })
-              .finally(() => clearGuestId());
+            // Awaited (not fire-and-forget) so the migration is guaranteed to finish before
+            // the `/chat` mount fires its first `getAgentMe` — otherwise the reconciliation
+            // payload it depends on can arrive too late for the first render.
+            try {
+              await migrateGuest(data.id_token, existingGuestId);
+            } catch (err) {
+              // A guest cookie can exist client-side (`crypto.randomUUID()`) without a
+              // matching server-side guest record — that only gets created on the first
+              // guest chat/agent request. Logging in without ever chatting as a guest is
+              // a normal path, not an error: BE returns 404 ("Guest not found") for it.
+              // Only surface unexpected failures to the console.
+              const message = err instanceof Error ? err.message : "";
+              if (!message.startsWith("HTTP 404")) {
+                console.error("[AuthCallback] migrateGuest error:", err);
+              }
+            } finally {
+              clearGuestId();
+            }
           }
           navigate("/chat");
         },
