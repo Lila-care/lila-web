@@ -26,6 +26,10 @@ interface UseLilaChatReturn {
   showUpgradeGate: boolean;
   hasActiveTemplate: boolean;
   onboardingPending: boolean;
+  // True until the mount-time `agent/me` check (which determines `onboardingPending`) has
+  // settled — while true, the UI must not offer an interactive composer/chips, since sending a
+  // message before this resolves races the backend's onboarding routing (see ChatWindow).
+  isCheckingOnboarding: boolean;
   setShowLoginGate: (v: boolean) => void;
   setShowUpgradeGate: (v: boolean) => void;
   sendMessage: (text: string) => Promise<void>;
@@ -55,6 +59,7 @@ export function useLilaChat(): UseLilaChatReturn {
   const [showUpgradeGate, setShowUpgradeGate] = useState(false);
   const [hasActiveTemplate, setHasActiveTemplate] = useState(true);
   const [onboardingPending, setOnboardingPending] = useState(false);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
   // Re-fetches agent/me and syncs the local onboarding flag — reused both on mount and after
   // every turn during onboarding, since the backend has no dedicated "onboarding complete" event.
@@ -89,7 +94,8 @@ export function useLilaChat(): UseLilaChatReturn {
               ? [
                   {
                     role: "assistant",
-                    content: "Antes de seguir, revisemos lo que ya nos contaste.",
+                    content:
+                      "Antes de seguir, revisemos lo que ya nos contaste.",
                     timestamp: new Date().toISOString(),
                     kind: "reconciliation",
                     data: { formId, questions },
@@ -144,7 +150,8 @@ export function useLilaChat(): UseLilaChatReturn {
           );
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIsCheckingOnboarding(false));
     // refreshAgentMe intentionally omitted: it's stable per `token`, already a dependency below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -269,7 +276,9 @@ export function useLilaChat(): UseLilaChatReturn {
       answers: { questionId: string; answerText: string }[],
     ) => {
       if (!token) {
-        throw new Error("Necesitas iniciar sesión para confirmar tus respuestas.");
+        throw new Error(
+          "Necesitas iniciar sesión para confirmar tus respuestas.",
+        );
       }
       await reconcileOnboarding(token, { formId, answers });
     },
@@ -289,6 +298,7 @@ export function useLilaChat(): UseLilaChatReturn {
     showUpgradeGate,
     hasActiveTemplate,
     onboardingPending,
+    isCheckingOnboarding,
     setShowLoginGate,
     setShowUpgradeGate,
     sendMessage: send,

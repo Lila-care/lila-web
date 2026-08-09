@@ -29,6 +29,7 @@ function ChatPage() {
     upgradePromptLimit,
     hasActiveTemplate,
     onboardingPending,
+    isCheckingOnboarding,
     sendMessage,
     loadConversation,
     startNewConversation,
@@ -185,6 +186,7 @@ function ChatPage() {
               isLoading={isLoading}
               onSend={sendMessage}
               onboardingPending={onboardingPending}
+              isCheckingOnboarding={isCheckingOnboarding}
               onConfirmReconciliation={confirmReconciliation}
             />
           )}
