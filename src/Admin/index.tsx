@@ -261,7 +261,7 @@ function Admin() {
             {/* LEFT SIDE */}
             <div className="flex-1 p-10">
               {loading ? (
-                <p className="text-lila-text">Loading...</p>
+                <p className="text-text">Loading...</p>
               ) : (
                 <>
                   <UsersTable data={data} onSelectUser={setSelectedUser} />
@@ -270,17 +270,17 @@ function Admin() {
                     <button
                       disabled={page === 1}
                       onClick={() => setPage((p) => p - 1)}
-                      className="px-4 py-2 bg-lila-primary text-white rounded disabled:opacity-40"
+                      className="px-4 py-2 bg-primary text-white rounded disabled:opacity-40"
                     >
                       Prev
                     </button>
-                    <span className="text-lila-text">
+                    <span className="text-text">
                       Page {page} of {totalPages}
                     </span>
                     <button
                       disabled={page === totalPages}
                       onClick={() => setPage((p) => p + 1)}
-                      className="px-4 py-2 bg-lila-primary text-white rounded disabled:opacity-40"
+                      className="px-4 py-2 bg-primary text-white rounded disabled:opacity-40"
                     >
                       Next
                     </button>
