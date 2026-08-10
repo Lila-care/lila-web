@@ -1,52 +1,72 @@
-import { UserReport } from "@/Admin/UsersTable"
+import { authFetch } from "@/api/authFetch";
 
-export type PaginatedUsersResponse = {
-  data: UserReport[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
+const BASE_URL = import.meta.env.VITE_API_URL;
+
+// --- Types (mirror BE contract exactly — GET /admin/dashboard/users[/:userId]) ---
+
+export interface DashboardUserListItemDto {
+  userId: string;
+  email: string | undefined;
+  cycleReports: number;
+  conversations: number;
+  lastActivityAt: string | null;
 }
 
-export async function fetchUsers(page: number, limit: number): Promise<PaginatedUsersResponse> {
-  const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/admin/dashboard/paginated?page=${page}&limit=${limit}`
-  )
+export interface PaginatedDashboardUsersDto {
+  data: DashboardUserListItemDto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
-  if (!res.ok) {
-    throw new Error("Error fetching users")
-  }
+export interface DashboardUserDetailDto {
+  userId: string;
+  email: string | undefined;
+  tiers: string[];
+  preferredName?: string;
+  cycleReports: number;
+  conversations: number;
+  lastActivityAt: string | null;
+}
 
-  const json = await res.json()
+// --- Helpers ---
 
-  // 🟣 Convertir el formato del backend → formato UserReport del frontend
-  const mappedData: UserReport[] = json.data.map((item: any) => ({
-    id: item.user_id,
-    email: item.user_email,
-    cycleReports: item.cycle_reports,
-    energyReports: item.energy_reports,
-    symptomsReports: item.symptoms_reports,
-    total: item.total_reports,
-  }))
-
+function authHeaders(token: string) {
   return {
-    data: mappedData,
-    total: json.total,
-    page: json.page,
-    limit: json.limit,
-    totalPages: json.totalPages,
-  }
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
 }
 
-export async function fetchUserDetails(userId: string) {
-  const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/admin/dashboard/user/profile/${userId}`
-  )
-
+async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    throw new Error("Error fetching user details")
+    const text = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${text}`);
   }
+  return res.json() as Promise<T>;
+}
 
-  const json = await res.json()
-  return json
+// --- API functions ---
+
+export async function fetchUsers(
+  token: string,
+  page: number,
+  limit: number,
+): Promise<PaginatedDashboardUsersDto> {
+  const res = await authFetch(
+    `${BASE_URL}/admin/dashboard/users?page=${page}&limit=${limit}`,
+    { headers: authHeaders(token) },
+  );
+  return handleResponse<PaginatedDashboardUsersDto>(res);
+}
+
+export async function fetchUserDetails(
+  token: string,
+  userId: string,
+): Promise<DashboardUserDetailDto> {
+  const res = await authFetch(`${BASE_URL}/admin/dashboard/users/${userId}`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse<DashboardUserDetailDto>(res);
 }
