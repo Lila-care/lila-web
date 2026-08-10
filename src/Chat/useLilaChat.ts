@@ -210,9 +210,15 @@ export function useLilaChat(): UseLilaChatReturn {
             parseInt(localStorage.getItem(USER_COUNT_KEY) ?? "0", 10) + 1;
           localStorage.setItem(USER_COUNT_KEY, String(newCount));
           setUserCount(newCount);
-          if (newCount >= upgradePromptLimit) {
-            setShowUpgradeGate(true);
-          }
+          // Upgrade gate disabled for now: this counter never resets by date
+          // (permanently blocks a browser after `upgradePromptLimit` messages,
+          // ever) and "Mejorar mi plan" has no real checkout behind it yet on
+          // main — both land together with the companion ms-lila backend gate
+          // once feat/subscription-checkout ships. Until then, don't strand
+          // real users with no way to actually upgrade.
+          // if (newCount >= upgradePromptLimit) {
+          //   setShowUpgradeGate(true);
+          // }
         } else {
           // Increment anon count after successful response
           const newCount =
