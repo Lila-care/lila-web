@@ -212,6 +212,10 @@ test.describe("Onboarding flow", () => {
     await seedAuthToken(page, token);
     await page.goto(`${BASE_URL}/chat`);
 
+    // El Sidebar arranca colapsado en /chat — expandirlo con el toggle antes de
+    // verificar el avatar/nombre reales que vive dentro de su AccountBanner.
+    await page.getByTestId("sidebar-toggle").click();
+
     await expect(page.getByTestId("account-avatar")).toBeVisible();
     await expect(page.getByTestId("account-avatar")).toHaveAttribute(
       "src",

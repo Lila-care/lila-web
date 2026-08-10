@@ -143,7 +143,9 @@ async function mockAuthenticatedShell(page: Page) {
 }
 
 test.describe("Cycle tracking — navegación por sidebar", () => {
-  test("navega por las 6 rutas y resalta el item activo", async ({ page }) => {
+  test("navega por las rutas habilitadas y resalta el item activo", async ({
+    page,
+  }) => {
     const token = fakeIdToken();
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
@@ -151,17 +153,26 @@ test.describe("Cycle tracking — navegación por sidebar", () => {
     await page.goto(`${BASE_URL}/today`);
     await expect(page.getByTestId("nav-item-today")).toBeVisible();
 
+    // "Hoy" y "Aprende" están deshabilitados en el sidebar (badge "Pronto") — solo
+    // Chat, Calendario y Perfil son navegables por click hoy.
     const routes: Array<{ href: string; navTestId: string }> = [
       { href: "/chat", navTestId: "nav-item-chat" },
       { href: "/calendar", navTestId: "nav-item-calendar" },
-      { href: "/learn", navTestId: "nav-item-learn" },
       { href: "/profile", navTestId: "nav-item-profile" },
-      { href: "/today", navTestId: "nav-item-today" },
     ];
 
     for (const { href, navTestId } of routes) {
       await page.getByTestId(navTestId).click();
       await page.waitForURL(`${BASE_URL}${href}`);
+
+      // /chat monta el Sidebar colapsado por defecto (tiene su propio rail de
+      // conversaciones — ver ChatPage.tsx) — hay que expandirlo con el toggle antes
+      // de poder seguir clickeando items dentro de él.
+      const sidebarToggle = page.getByTestId("sidebar-toggle");
+      if (await sidebarToggle.isVisible()) {
+        await sidebarToggle.click();
+      }
+
       // El item activo del sidebar tiene fondo lila sólido (#9B72C8) vía inline style.
       await expect(page.getByTestId(navTestId)).toHaveCSS(
         "background-color",
@@ -177,7 +188,7 @@ test.describe("Cycle tracking — navegación por sidebar", () => {
 
     await page.goto(`${BASE_URL}/today`);
 
-    const diario = page.getByTestId("nav-item-diario");
+    const diario = page.getByTestId("nav-item-journal");
     await expect(diario).toBeVisible();
     await expect(diario).toHaveAttribute("aria-disabled", "true");
     await diario.click({ force: true });
@@ -504,7 +515,9 @@ test.describe("/calendar", () => {
       .count();
     expect(todayCellCount).toBe(1);
     await expect(
-      page.locator(`[data-testid="calendar-day-cell"][data-date="${todayDate}"]`),
+      page.locator(
+        `[data-testid="calendar-day-cell"][data-date="${todayDate}"]`,
+      ),
     ).toHaveAttribute("data-today", "true");
   });
 
@@ -609,11 +622,13 @@ test.describe("/calendar — resumen de perfil", () => {
     await expect(card).toBeVisible();
     // periodSummaryBody() default tiene activePeriod.isActive: true, así que la fila de "día
     // del ciclo" queda reemplazada por el badge — se verifica en el test siguiente.
-    await expect(page.getByTestId("cycle-summary-average-length")).toContainText(
-      "28 días",
-    );
+    await expect(
+      page.getByTestId("cycle-summary-average-length"),
+    ).toContainText("28 días");
     await expect(page.getByTestId("cycle-summary-next-period")).toBeVisible();
-    await expect(page.getByTestId("cycle-summary-fertile-window")).toBeVisible();
+    await expect(
+      page.getByTestId("cycle-summary-fertile-window"),
+    ).toBeVisible();
   });
 
   test("activePeriod.isActive true muestra el badge 'En tu período' en vez de la fila de día de ciclo", async ({
@@ -625,9 +640,9 @@ test.describe("/calendar — resumen de perfil", () => {
 
     await page.goto(`${BASE_URL}/calendar`);
 
-    await expect(page.getByTestId("cycle-summary-active-period-badge")).toContainText(
-      "En tu período · día 3",
-    );
+    await expect(
+      page.getByTestId("cycle-summary-active-period-badge"),
+    ).toContainText("En tu período · día 3");
     await expect(page.getByTestId("cycle-summary-day")).toHaveCount(0);
   });
 
@@ -694,7 +709,9 @@ test.describe("/calendar — resumen de perfil", () => {
     await expect(page.getByTestId("cycle-summary-empty")).toContainText(
       "Todavía no configuraste los datos de tu ciclo",
     );
-    await expect(page.getByTestId("cycle-summary-average-length")).toHaveCount(0);
+    await expect(page.getByTestId("cycle-summary-average-length")).toHaveCount(
+      0,
+    );
     await page.getByTestId("cycle-summary-configure-cta").click();
     await expect(page).toHaveURL(`${BASE_URL}/profile`);
   });
@@ -755,6 +772,10 @@ test.describe("/chat conserva funcionalidad con el shell nuevo", () => {
     await seedAuthToken(page, token);
 
     await page.goto(`${BASE_URL}/chat`);
+
+    // El Sidebar arranca colapsado en /chat (rail de conversaciones propio) —
+    // expandirlo con el toggle antes de comprobar que el nav sigue funcionando.
+    await page.getByTestId("sidebar-toggle").click();
 
     await expect(page.getByTestId("app-sidebar")).toBeVisible();
     await expect(page.getByTestId("nav-item-chat")).toBeVisible();
@@ -887,8 +908,12 @@ test.describe("/profile/privacy", () => {
 
     await page.goto(`${BASE_URL}/profile/privacy`);
 
-    await expect(page.getByTestId("profile-privacy-download-button")).toBeDisabled();
-    await expect(page.getByTestId("profile-privacy-delete-button")).toBeDisabled();
+    await expect(
+      page.getByTestId("profile-privacy-download-button"),
+    ).toBeDisabled();
+    await expect(
+      page.getByTestId("profile-privacy-delete-button"),
+    ).toBeDisabled();
   });
 });
 
@@ -953,7 +978,7 @@ test.describe("Responsive 768px — CycleCard no comprime el aviso de 'Tu ciclo'
   // larga) — el texto se envolvía casi palabra por palabra. Fix: el grid de PerfilPage pasa a
   // `lg:grid-cols-2` (1024px) en vez de `md:grid-cols-2`, así que a 768px "Tu ciclo" ocupa el
   // ancho completo del <main> (apilado sobre "Notificaciones"), con espacio de sobra para el
-  // aviso. Este test navega /perfil completo (Sidebar real vía AppShell), no CycleCard en
+  // aviso. Este test navega /profile completo (Sidebar real vía AppShell), no CycleCard en
   // aislamiento — así es como QA reprodujo el bug.
   test("el aviso 'Lila usa estos datos...' no se envuelve en columnas de una palabra a 768px", async ({
     page,
@@ -963,7 +988,7 @@ test.describe("Responsive 768px — CycleCard no comprime el aviso de 'Tu ciclo'
     await seedAuthToken(page, token);
 
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto(`${BASE_URL}/perfil`);
+    await page.goto(`${BASE_URL}/profile`);
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByTestId("app-sidebar")).toBeVisible();
@@ -989,7 +1014,9 @@ test.describe("Responsive 768px — CycleCard no comprime el aviso de 'Tu ciclo'
 
     // Sin overflow horizontal a 768px tampoco.
     const hasOverflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
     );
     expect(hasOverflow).toBe(false);
   });
