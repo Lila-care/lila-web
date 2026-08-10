@@ -69,7 +69,7 @@ function MonthGrid({
           className="w-8 h-8 rounded-[10px] flex items-center justify-center"
           style={{ border: "1px solid rgba(61,43,80,0.12)" }}
         >
-          <ChevronLeft size={15} color="#3D2B50" />
+          <ChevronLeft size={15} color="#3D2B50" className="shrink-0" />
         </button>
         <div
           className="font-semibold text-lg"
@@ -84,7 +84,7 @@ function MonthGrid({
           className="w-8 h-8 rounded-[10px] flex items-center justify-center"
           style={{ border: "1px solid rgba(61,43,80,0.12)" }}
         >
-          <ChevronRight size={15} color="#3D2B50" />
+          <ChevronRight size={15} color="#3D2B50" className="shrink-0" />
         </button>
       </div>
 
