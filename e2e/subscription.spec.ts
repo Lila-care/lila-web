@@ -72,13 +72,13 @@ const ACTIVE_PLAN = {
   description: "Acceso ilimitado a Lila",
 };
 
-test.describe("Checkout de usuaria — gate de upgrade dispara Wompi + POST /subscription/checkout", () => {
+test.describe("Checkout de usuaria — gate de upgrade dispara Wompi + POST /subscription/confirm-widget-payment", () => {
   test("happy path — llegar al límite abre el gate, pagar con Wompi crea la suscripción y cierra el modal", async ({
     page,
   }) => {
     await mockWompiWidget(page);
 
-    let checkoutBody: Record<string, unknown> | null = null;
+    let confirmBody: Record<string, unknown> | null = null;
 
     await page.route(`${API_URL}/lila/config`, (route) =>
       fulfillJson(route, CONFIG_BODY),
@@ -102,33 +102,43 @@ test.describe("Checkout de usuaria — gate de upgrade dispara Wompi + POST /sub
     await page.route(`${API_URL}/subscription/plans`, (route) =>
       fulfillJson(route, [ACTIVE_PLAN]),
     );
-    await page.route(`${API_URL}/subscription/checkout`, async (route) => {
-      checkoutBody = route.request().postDataJSON();
-      await fulfillJson(
-        route,
-        {
-          subscription: {
-            userId: "sub-user",
-            status: "active",
-            planId: checkoutBody?.planId,
-            currentPeriodEnd: "2026-08-19T00:00:00.000Z",
-            cancelAtPeriodEnd: false,
-            updatedAt: "2026-07-20T00:00:00.000Z",
+    // Public endpoint (no auth) — `useWompiCheckout` fetches the SHA256 integrity
+    // signature before opening the widget (see src/Chat/useWompiCheckout.ts).
+    await page.route(`${API_URL}/subscription/checkout-signature*`, (route) =>
+      fulfillJson(route, { signature: "e2e-fake-signature" }),
+    );
+    // The widget already charged the user client-side — the backend only verifies
+    // the transaction and activates the subscription (src/Chat/UpgradeGateModal.tsx).
+    await page.route(
+      `${API_URL}/subscription/confirm-widget-payment`,
+      async (route) => {
+        confirmBody = route.request().postDataJSON();
+        await fulfillJson(
+          route,
+          {
+            subscription: {
+              userId: "sub-user",
+              status: "active",
+              planId: confirmBody?.planId,
+              currentPeriodEnd: "2026-08-19T00:00:00.000Z",
+              cancelAtPeriodEnd: false,
+              updatedAt: "2026-07-20T00:00:00.000Z",
+            },
+            payment: {
+              transactionId: "txn-e2e-1",
+              userId: "sub-user",
+              planId: confirmBody?.planId,
+              amountInCents: 1990000,
+              currency: "COP",
+              status: "APPROVED",
+              type: "INITIAL",
+              createdAt: "2026-07-20T00:00:00.000Z",
+            },
           },
-          payment: {
-            transactionId: "txn-e2e-1",
-            userId: "sub-user",
-            planId: checkoutBody?.planId,
-            amountInCents: 1990000,
-            currency: "COP",
-            status: "APPROVED",
-            type: "INITIAL",
-            createdAt: "2026-07-20T00:00:00.000Z",
-          },
-        },
-        201,
-      );
-    });
+          201,
+        );
+      },
+    );
 
     await seedAuthToken(page, "sub-user");
     await page.goto(`${BASE_URL}/chat`);
@@ -144,8 +154,8 @@ test.describe("Checkout de usuaria — gate de upgrade dispara Wompi + POST /sub
     await checkoutButton.click();
 
     await expect(page.getByTestId("upgrade-gate-modal")).toHaveCount(0);
-    expect(checkoutBody).toMatchObject({
-      paymentSourceId: "src-e2e-1",
+    expect(confirmBody).toMatchObject({
+      transactionId: "txn-e2e-1",
       planId: ACTIVE_PLAN.planId,
     });
   });

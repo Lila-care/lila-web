@@ -31,6 +31,7 @@ jobs:
           VITE_CLIENT_ID: e2e-test-client-id
           VITE_REDIRECT_URI: http://localhost:5173/auth/callback
           VITE_API_URL: http://localhost:6100
+          VITE_WOMPI_PUBLIC_KEY: e2e-test-wompi-public-key
 
   deploy-staging:
     if: github.event.label.name == 'staging'
