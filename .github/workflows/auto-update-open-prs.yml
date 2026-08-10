@@ -1,0 +1,53 @@
+name: Auto-update open PRs after merge
+
+# Whenever a PR merges into main, brings every other open PR targeting main up to date
+# via GitHub's native "update branch" API (a merge of main into the PR branch — no
+# rebase, no force-push, no rewritten history). Surfaces real conflicts early instead of
+# letting them pile up across parallel PRs.
+#
+# Repo-agnostic as written — copy this file into any repo's .github/workflows/ unmodified
+# (see ../README.md, or run ../install.sh <path-to-repo>). Only edit it if the target
+# repo's default branch isn't "main".
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-update-open-prs
+  cancel-in-progress: false
+
+jobs:
+  update-open-prs:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update all other open PRs against main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repo="${{ github.repository }}"
+          merged_pr="${{ github.event.pull_request.number }}"
+
+          gh pr list --repo "$repo" --base main --state open \
+            --json number,isDraft,labels \
+            --jq '.[] | select(.number != '"$merged_pr"') | select(.isDraft == false) | select([.labels[].name] | contains(["no-auto-update"]) | not) | .number' \
+            > open_prs.txt
+
+          while read -r pr; do
+            [ -z "$pr" ] && continue
+            echo "Updating PR #$pr"
+            if gh api --method PUT "repos/$repo/pulls/$pr/update-branch" >/dev/null 2>update-error.log; then
+              echo "PR #$pr updated"
+            else
+              echo "::warning::PR #$pr could not be auto-updated (likely real conflicts)"
+              cat update-error.log
+              gh pr comment "$pr" --repo "$repo" --body "🔄 No pude actualizar esta rama automáticamente contra \`main\` después de que se mergeó #$merged_pr — probablemente hay conflictos reales. Traé \`main\` a tu rama y resolvelos a mano (\`git fetch origin main && git rebase origin/main\`, o el merge equivalente)."
+              gh pr edit "$pr" --repo "$repo" --add-label "needs-manual-rebase" || echo "::warning::no pude agregar el label needs-manual-rebase — ¿existe en este repo?"
+            fi
+          done < open_prs.txt
