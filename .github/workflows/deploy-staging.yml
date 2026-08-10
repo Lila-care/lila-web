@@ -61,13 +61,22 @@ jobs:
           AWS_DEFAULT_REGION: us-east-1
           AMPLIFY_APP_ID: d12kklaxfcdyvo
         run: |
-          # Amplify's webhook-triggered auto-build doesn't reliably create a job for pushes
-          # to "staging" (confirmed: GitHub delivers the webhook, Amplify 202s it, no job
-          # ever appears) — also, its jobs report commitId as the literal string "HEAD",
-          # never a real SHA, so there'd be no reliable way to match "our" job anyway.
-          # Starting the job ourselves sidesteps both problems: we get the exact jobId back.
-          JOB_ID=$(aws amplify start-job --app-id "$AMPLIFY_APP_ID" --branch-name staging --job-type RELEASE --query 'jobSummary.jobId' --output text)
-          echo "Started Amplify job $JOB_ID"
+          # Amplify's webhook-triggered auto-build isn't reliable enough to depend on alone,
+          # so we still start the job ourselves to get an exact jobId back. But the webhook
+          # sometimes *does* win the race (it fires on our push before this step runs), and
+          # when it does, start-job fails with LimitExceededException even though a build for
+          # this exact commit is already under way. Rather than treat that as a failure,
+          # attach to whatever job Amplify already started.
+          JOB_ID=$(aws amplify start-job --app-id "$AMPLIFY_APP_ID" --branch-name staging --job-type RELEASE --query 'jobSummary.jobId' --output text 2>/tmp/start-job-err) || {
+            if grep -q "already have pending or running jobs" /tmp/start-job-err; then
+              echo "Amplify's webhook already started a build for this push — attaching to it"
+              JOB_ID=$(aws amplify list-jobs --app-id "$AMPLIFY_APP_ID" --branch-name staging --max-results 1 --query 'jobSummaries[0].jobId' --output text)
+            else
+              cat /tmp/start-job-err >&2
+              exit 1
+            fi
+          }
+          echo "Watching Amplify job $JOB_ID"
 
           for attempt in $(seq 1 30); do
             STATUS=$(aws amplify get-job --app-id "$AMPLIFY_APP_ID" --branch-name staging --job-id "$JOB_ID" --query 'job.summary.status' --output text)
