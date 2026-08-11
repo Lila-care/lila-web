@@ -69,7 +69,7 @@ function MonthGrid({
           className="w-8 h-8 rounded-[10px] flex items-center justify-center"
           style={{ border: "1px solid rgba(61,43,80,0.12)" }}
         >
-          <ChevronLeft size={15} color="#3D2B50" />
+          <ChevronLeft size={15} color="#3D2B50" className="shrink-0" />
         </button>
         <div
           className="font-semibold text-lg"
@@ -84,7 +84,7 @@ function MonthGrid({
           className="w-8 h-8 rounded-[10px] flex items-center justify-center"
           style={{ border: "1px solid rgba(61,43,80,0.12)" }}
         >
-          <ChevronRight size={15} color="#3D2B50" />
+          <ChevronRight size={15} color="#3D2B50" className="shrink-0" />
         </button>
       </div>
 
@@ -107,12 +107,17 @@ function MonthGrid({
           const info = getPhaseInfo(dayData?.phaseName ?? null);
           const isSelected = cell.date === selectedDate;
           const isToday = dayData?.isToday ?? false;
-          const showPhaseColor = showCycle && !!dayData?.phaseName;
+          const hasPhase = showCycle && !!dayData?.phaseName;
+          // "Ambos" sigue tiñendo el fondo (vista combinada con luna). "Ciclo" (vista dedicada)
+          // usa fondo neutro y en su lugar marca el borde del número con el color de la fase —
+          // pedido explícito: distinguir visualmente el modo dedicado del modo combinado.
+          const showPhaseTint = viewMode === "ambos" && hasPhase;
+          const showPhaseBorder = viewMode === "ciclo" && hasPhase;
           const showMoonDot = showMoon && isNotableMoonDay(cell.date);
           // Sin phaseName la celda queda plana (mismo fondo neutro que cualquier otro día) —
           // "hoy" necesita distinguirse igual, con el mismo tono neutro del fallback de
           // phaseInfo.ts. Si además está seleccionada, el contorno de selección (más grueso)
-          // tiene prioridad visual.
+          // tiene prioridad visual sobre el borde de fase.
           const todayColor = NO_PHASE_INFO.dotColor;
           return (
             <button
@@ -124,15 +129,17 @@ function MonthGrid({
               data-today={isToday || undefined}
               className="relative aspect-square rounded-2xl flex items-center justify-center text-[13px] font-semibold"
               style={{
-                background: showPhaseColor
+                background: showPhaseTint
                   ? `${info.dotColor}22`
                   : "rgba(61,43,80,0.04)",
-                color: showPhaseColor ? info.textColor : "#3D2B50",
+                color: showPhaseTint || showPhaseBorder ? info.textColor : "#3D2B50",
                 boxShadow: isSelected
                   ? `inset 0 0 0 2px ${info.dotColor}`
-                  : isToday
-                    ? `inset 0 0 0 1.5px ${todayColor}`
-                    : undefined,
+                  : showPhaseBorder
+                    ? `inset 0 0 0 1.5px ${info.dotColor}`
+                    : isToday
+                      ? `inset 0 0 0 1.5px ${todayColor}`
+                      : undefined,
               }}
             >
               {cell.dayNumber}
