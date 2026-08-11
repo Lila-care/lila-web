@@ -1,5 +1,10 @@
 import { Repeat } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@lila-care/design-system";
 
 interface RetentionCardProps {
   newUsersInRange: number;

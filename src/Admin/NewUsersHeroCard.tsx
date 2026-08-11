@@ -8,7 +8,12 @@ import {
 } from "recharts";
 import { UserPlus } from "lucide-react";
 import { DailyCount } from "@/api/dashboard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@lila-care/design-system";
 import {
   describeTrend,
   formatDateLong,

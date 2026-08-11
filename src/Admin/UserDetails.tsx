@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import { useUserDetail } from "@/Admin/useUsers";
 import { formatDateLong } from "@/Admin/dashboardFormat";
-import { Button } from "@/components/ui/button";
+import { Button } from "@lila-care/design-system";
 
 interface UserDetailsProps {
   userId: string;
