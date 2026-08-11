@@ -108,8 +108,8 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # PR title is author-controlled text — pass it through env + jq (never inline
-          # ${{ }} expressions into the JSON body) so quotes/apostrophes in the title
-          # can't break the payload or, worse, get interpreted as shell syntax.
+          # GitHub Actions expressions into the JSON body) so quotes/apostrophes in the
+          # title can't break the payload or, worse, get interpreted as shell syntax.
           PAYLOAD=$(jq -n \
             --arg repo "$REPO" \
             --argjson pr_number "$PR_NUMBER" \
