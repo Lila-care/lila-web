@@ -77,6 +77,8 @@ button:focus-visible {
   --color-secondary: #F8EAFE;
   --color-accent: #d8d9b1;
   --color-text: #828282;
+  --color-muted: #F0EEE8;
+  --color-muted-foreground: #8A8194;
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
