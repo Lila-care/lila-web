@@ -106,6 +106,47 @@ function fakeIdToken(claims: Record<string, unknown>): string {
 }
 
 test.describe("Onboarding flow", () => {
+  // Regression test for: the composer/chip-based EmptyState was interactive immediately on
+  // mount, before GET /lila/agent/me (which determines onboarding.pending) had resolved — a
+  // fast send during that window raced the backend into skipping onboarding entirely for that
+  // user. Simulates the window with an artificial delay on agent/me.
+  test("composer no es interactivo mientras se resuelve agent/me — evita enviar antes de conocer el estado de onboarding", async ({
+    page,
+  }) => {
+    const greeting = "¡Hola! Antes de empezar, cuéntame un poco sobre ti.";
+    let releaseAgentMe: () => void = () => {};
+    const agentMeDelay = new Promise<void>((resolve) => {
+      releaseAgentMe = resolve;
+    });
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, async (route) => {
+      await agentMeDelay;
+      await fulfillJson(
+        route,
+        agentMeBody({ onboardingPending: true, greetingMessage: greeting }),
+      );
+    });
+
+    await page.goto(`${BASE_URL}/chat`);
+
+    // While agent/me is still in flight: no interactive composer, no chips, no greeting yet.
+    await expect(page.getByTestId("onboarding-check-loading")).toBeVisible();
+    await expect(page.getByTestId("empty-state")).toHaveCount(0);
+    await expect(page.getByPlaceholder("Escríbeme...")).toHaveCount(0);
+    await expect(page.getByTestId("message-bubble")).toHaveCount(0);
+
+    releaseAgentMe();
+
+    // Once it resolves: the greeting appears and the composer becomes available.
+    const firstBubble = page.getByTestId("message-bubble").first();
+    await expect(firstBubble).toBeVisible();
+    await expect(firstBubble).toContainText(greeting);
+    await expect(page.getByTestId("onboarding-check-loading")).toHaveCount(0);
+  });
+
   test("guest nuevo ve el greetingMessage sin escribir nada", async ({
     page,
   }) => {
@@ -276,7 +317,10 @@ test.describe("Onboarding resume (activeConversation)", () => {
     await page.route(`${API_URL}/lila/agent/me`, (route) =>
       fulfillJson(
         route,
-        agentMeReconciliationBody(RECONCILIATION_DATA, ACTIVE_CONVERSATION_DATA),
+        agentMeReconciliationBody(
+          RECONCILIATION_DATA,
+          ACTIVE_CONVERSATION_DATA,
+        ),
       ),
     );
     await page.route(`${API_URL}/lila/conversations`, (route) =>
@@ -352,9 +396,7 @@ test.describe("Onboarding reconciliation", () => {
     await expect(page.getByTestId("reconciliation-card")).toBeVisible();
 
     const firstQuestionId = RECONCILIATION_DATA.questions[0].questionId;
-    await page
-      .getByTestId(`reconciliation-edit-${firstQuestionId}`)
-      .click();
+    await page.getByTestId(`reconciliation-edit-${firstQuestionId}`).click();
     await page
       .getByTestId(`reconciliation-input-${firstQuestionId}`)
       .fill("29");

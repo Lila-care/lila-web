@@ -9,6 +9,10 @@ interface ChatWindowProps {
   isLoading: boolean;
   onSend: (text: string) => void;
   onboardingPending?: boolean;
+  // True until the initial `agent/me` onboarding check (mount-time) has resolved. While true,
+  // neither EmptyState nor its chips/composer must render — sending before this resolves races
+  // the backend into skipping onboarding for the user's first message (see useLilaChat).
+  isCheckingOnboarding?: boolean;
   onConfirmReconciliation?: (
     formId: string,
     answers: { questionId: string; answerText: string }[],
@@ -66,6 +70,7 @@ function ChatWindow({
   isLoading,
   onSend,
   onboardingPending = false,
+  isCheckingOnboarding = false,
   onConfirmReconciliation,
 }: ChatWindowProps) {
   const [input, setInput] = useState("");
@@ -88,6 +93,49 @@ function ChatWindow({
       handleSend();
     }
   };
+
+  // Before `agent/me` resolves, `onboardingPending` is indistinguishable from "checked and
+  // confirmed not pending" (both are `false`) — rendering EmptyState here would let the user
+  // send a message or click a suggestion chip that races the backend's onboarding routing.
+  // Render nothing interactive until the real state is known.
+  if (messages.length === 0 && !isLoading && isCheckingOnboarding) {
+    return (
+      <div
+        data-testid="onboarding-check-loading"
+        className="flex h-full items-center justify-center"
+      >
+        <div className="flex gap-[5px] items-center">
+          <span
+            className="w-[7px] h-[7px] rounded-full"
+            style={{
+              background: "#B9A3E3",
+              animation: "lilaWDot 1.2s infinite ease-in-out",
+            }}
+          />
+          <span
+            className="w-[7px] h-[7px] rounded-full"
+            style={{
+              background: "#B9A3E3",
+              animation: "lilaWDot 1.2s 0.18s infinite ease-in-out",
+            }}
+          />
+          <span
+            className="w-[7px] h-[7px] rounded-full"
+            style={{
+              background: "#B9A3E3",
+              animation: "lilaWDot 1.2s 0.36s infinite ease-in-out",
+            }}
+          />
+        </div>
+        <style>{`
+          @keyframes lilaWDot {
+            0%, 80%, 100% { transform: translateY(0); opacity: .45; }
+            40% { transform: translateY(-4px); opacity: 1; }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   // Show EmptyState (with suggestion chips) only when there are no messages, not loading, and
   // onboarding isn't pending — during onboarding the greeting message is seeded as the first
