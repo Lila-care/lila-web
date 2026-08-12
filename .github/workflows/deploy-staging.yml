@@ -15,6 +15,15 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # .npmrc resolves @lila-care/design-system from GitHub Packages via
+    # ${NODE_AUTH_TOKEN}; yarn needs it set for every yarn invocation in this
+    # job, not just install, because it reads .npmrc up front regardless of
+    # whether that step touches the network. GITHUB_TOKEN can't be used here —
+    # it doesn't carry package-read access across repos in the org — so this
+    # needs a PAT with read:packages stored as the GH_PACKAGES_READ_TOKEN
+    # secret (see Lila-care/lila-web#29 for context).
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_READ_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
