@@ -1,93 +1,81 @@
-import { useEffect, useState } from "react";
-import { UserProfileData } from "./UsersTable";
-import { fetchUserDetails } from "@/api/users";
-import { sendNotificationToUser } from "@/api/notifications";
+import { X } from "lucide-react";
+import { useUserDetail } from "@/Admin/useUsers";
+import { formatDateLong } from "@/Admin/dashboardFormat";
+import { Button } from "@/components/ui/button";
 
-function UserDetails({ userId }: { userId: string }) {
-  const [user, setUser] = useState<UserProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
+interface UserDetailsProps {
+  userId: string;
+  onClose?: () => void;
+}
 
-  // Estados para la notificación
-  const [notificationTitle, setNotificationTitle] = useState("");
-  const [notificationBody, setNotificationBody] = useState("");
-  const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    setLoading(true);
-    fetchUserDetails(userId)
-      .then((data) => setUser(data))
-      .finally(() => setLoading(false));
-  }, [userId]);
-
-  const handleSendNotification = async () => {
-    if (!notificationTitle || !notificationBody) return;
-    setSending(true);
-    try {
-      // Aquí deberías llamar tu API para enviar la notificación
-      console.log("Enviando notificación a", user?.device.deviceToken, notificationTitle, notificationBody);
-      await sendNotificationToUser(
-        user!.device.deviceToken,
-        notificationBody,
-        notificationTitle
-      )
-      alert("Notificación enviada!");
-      setNotificationTitle("");
-      setNotificationBody("");
-    } catch (err) {
-      console.error(err);
-      alert("Error al enviar la notificación");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  if (loading) {
-    return <p className="text-gray-500 p-4">Loading...</p>;
-  }
-
-  if (!user) {
-    return <p className="text-red-500 p-4">User not found</p>;
-  }
+function UserDetails({ userId, onClose }: UserDetailsProps) {
+  const { user, loading, error } = useUserDetail(userId);
 
   return (
-    <div className="p-6 space-y-8">
-      {/* Sección Profile */}
-      <div className="space-y-2 text-gray-700">
-        <h2 className="text-xl font-bold">User Profile</h2>
-        <p><span className="font-semibold">User ID:</span> {user.profile.userId}</p>
-        <p><span className="font-semibold">Profile ID:</span> {user.profile.id}</p>
-        <p><span className="font-semibold">First Report:</span> {user.profile.firstReport}</p>
-        <p><span className="font-semibold">Period Days:</span> {user.profile.periodDays}</p>
-        <p><span className="font-semibold">Cycle Size:</span> {user.profile.cycleSize}</p>
-      </div>
-
-      {/* Sección Notificación */}
-      <div className="space-y-4 border-t pt-6">
-        <h2 className="text-xl font-bold">Enviar notificación</h2>
-        <div className="flex flex-col space-y-2">
-          <input
-            type="text"
-            placeholder="Title"
-            className="border rounded p-2"
-            value={notificationTitle}
-            onChange={(e) => setNotificationTitle(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Body"
-            className="border rounded p-2"
-            value={notificationBody}
-            onChange={(e) => setNotificationBody(e.target.value)}
-          />
-          <button
-            className="bg-primary text-white rounded px-4 py-2 : disabled:bg-gray-400"
-            onClick={handleSendNotification}
-            disabled={sending}
+    <div className="p-6" data-testid="user-details">
+      {onClose && (
+        <div className="mb-4 flex justify-end">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onClose}
+            aria-label="Cerrar detalle de usuaria"
+            data-testid="user-details-close"
           >
-            {sending ? "Enviando..." : "Enviar notificación"}
-          </button>
+            <X className="size-4" aria-hidden="true" />
+          </Button>
         </div>
-      </div>
+      )}
+
+      {loading && (
+        <p className="p-4 text-gray-500" data-testid="user-details-loading">
+          Cargando...
+        </p>
+      )}
+
+      {!loading && error && (
+        <p className="p-4 text-red-500" data-testid="user-details-error">
+          Error al cargar la usuaria: {error}
+        </p>
+      )}
+
+      {!loading && !error && !user && (
+        <p className="p-4 text-red-500" data-testid="user-details-empty">
+          Usuaria no encontrada
+        </p>
+      )}
+
+      {!loading && !error && user && (
+        <div className="space-y-2 text-gray-700">
+          <h2 className="text-xl font-bold">
+            {user.preferredName ?? user.email ?? user.userId}
+          </h2>
+          <p>
+            <span className="font-semibold">Usuaria ID:</span> {user.userId}
+          </p>
+          <p>
+            <span className="font-semibold">Email:</span> {user.email ?? "—"}
+          </p>
+          <p>
+            <span className="font-semibold">Plan(es):</span>{" "}
+            {user.tiers.length > 0 ? user.tiers.join(", ") : "Sin plan"}
+          </p>
+          <p>
+            <span className="font-semibold">Reportes de ciclo:</span>{" "}
+            {user.cycleReports}
+          </p>
+          <p>
+            <span className="font-semibold">Conversaciones:</span>{" "}
+            {user.conversations}
+          </p>
+          <p>
+            <span className="font-semibold">Última actividad:</span>{" "}
+            {user.lastActivityAt
+              ? formatDateLong(user.lastActivityAt)
+              : "Nunca"}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

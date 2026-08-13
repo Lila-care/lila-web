@@ -44,7 +44,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
         {/* Navigation */}
         <nav className="flex gap-6">
-          <a href="/admin" className="hover:text-accent text-white">
+          <a href="/admin/dashboard" className="hover:text-accent text-white">
             Dashboard
           </a>
           <a href="/admin/users" className="hover:text-accent text-white">
