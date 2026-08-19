@@ -11,9 +11,12 @@ import {
   UpdateTemplateDto,
 } from "@/api/lila";
 import { useAuth } from "@/auth/AuthContext";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Skeleton,
+} from "@lila-care/design-system";
 
 // --- Template tab ---
 

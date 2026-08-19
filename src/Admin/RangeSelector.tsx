@@ -6,7 +6,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@lila-care/design-system";
 
 const RANGE_OPTIONS: { value: DashboardRangeDays; label: string }[] = [
   { value: 7, label: "7 días" },

@@ -7,10 +7,15 @@ import { NewUsersHeroCard } from "@/Admin/NewUsersHeroCard";
 import { RetentionCard } from "@/Admin/RetentionCard";
 import { EngagementSection } from "@/Admin/EngagementSection";
 import { TrendSection } from "@/Admin/TrendSection";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Skeleton,
+} from "@lila-care/design-system";
 
 function DashboardSkeleton() {
   return (
