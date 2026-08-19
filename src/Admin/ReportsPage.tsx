@@ -3,17 +3,18 @@ import AdminLayout from "@/Admin/AdminLayout";
 import { useDashboardStats } from "@/Admin/useDashboardStats";
 import { RangeSelector } from "@/Admin/RangeSelector";
 import { formatDateLong } from "@/Admin/dashboardFormat";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Alert,
+  AlertDescription,
+  Button,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@lila-care/design-system";
 
 function ReportsPage() {
   const {
