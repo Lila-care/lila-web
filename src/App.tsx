@@ -2,7 +2,9 @@ import { Route, Switch, Redirect } from "wouter";
 
 import "./App.css";
 import Terms from "./Terms";
-import Admin from "./Admin";
+import DashboardPage from "./Admin/DashboardPage";
+import UsersPage from "./Admin/UsersPage";
+import ReportsPage from "./Admin/ReportsPage";
 import Login from "./Admin/Login";
 import ChangePassword from "./Admin/ChangePassword";
 import AuthCallback from "./Admin/AuthCallback";
@@ -29,11 +31,27 @@ const App = () => {
           path="/admin/dashboard"
           component={() => (
             <ProtectedRoute>
-              <Admin />
+              <DashboardPage />
             </ProtectedRoute>
           )}
         />
         <Route path="/admin/change-password" component={ChangePassword} />
+        <Route
+          path="/admin/users"
+          component={() => (
+            <ProtectedRoute>
+              <UsersPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/admin/reports"
+          component={() => (
+            <ProtectedRoute>
+              <ReportsPage />
+            </ProtectedRoute>
+          )}
+        />
         <Route
           path="/admin/forms"
           component={() => (

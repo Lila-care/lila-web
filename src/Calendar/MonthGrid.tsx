@@ -102,7 +102,11 @@ function MonthGrid({
           }
           style={{ border: "1px solid rgba(61,43,80,0.12)" }}
         >
-          <ChevronLeft size={compact ? 12 : 15} color="#3D2B50" />
+          <ChevronLeft
+            size={compact ? 12 : 15}
+            color="#3D2B50"
+            className="shrink-0"
+          />
         </button>
         <div
           className={
@@ -123,7 +127,11 @@ function MonthGrid({
           }
           style={{ border: "1px solid rgba(61,43,80,0.12)" }}
         >
-          <ChevronRight size={compact ? 12 : 15} color="#3D2B50" />
+          <ChevronRight
+            size={compact ? 12 : 15}
+            color="#3D2B50"
+            className="shrink-0"
+          />
         </button>
       </div>
 
@@ -165,7 +173,7 @@ function MonthGrid({
           // Sin phaseName la celda queda plana (mismo fondo neutro que cualquier otro día) —
           // "hoy" necesita distinguirse igual, con el mismo tono neutro del fallback de
           // phaseInfo.ts. Si además está seleccionada, el contorno de selección (más grueso)
-          // tiene prioridad visual.
+          // tiene prioridad visual sobre el borde de fase.
           const todayColor = NO_PHASE_INFO.dotColor;
           return (
             <button

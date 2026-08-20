@@ -15,6 +15,15 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # .npmrc resolves @lila-care/design-system from GitHub Packages via
+    # ${NODE_AUTH_TOKEN}; yarn needs it set for every yarn invocation in this
+    # job, not just install, because it reads .npmrc up front regardless of
+    # whether that step touches the network. GITHUB_TOKEN can't be used here —
+    # it doesn't carry package-read access across repos in the org — so this
+    # needs a PAT with read:packages stored as the GH_PACKAGES_READ_TOKEN
+    # secret (see Lila-care/lila-web#29 for context).
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_READ_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -99,14 +108,27 @@ jobs:
 
       - name: Notify Product QA gate (#themis-verdict)
         if: success()
+        env:
+          SLACK_BOT_WEBHOOK_URL: ${{ secrets.SLACK_BOT_WEBHOOK_URL }}
+          DEPLOY_WEBHOOK_SECRET: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          curl -sf -X POST "${{ secrets.SLACK_BOT_WEBHOOK_URL }}/webhooks/deploy-success" \
-            -H "Authorization: Bearer ${{ secrets.DEPLOY_WEBHOOK_SECRET }}" \
+          # PR title is author-controlled text — pass it through env + jq (never inline
+          # GitHub Actions expressions into the JSON body) so quotes/apostrophes in the
+          # title can't break the payload or, worse, get interpreted as shell syntax.
+          PAYLOAD=$(jq -n \
+            --arg repo "$REPO" \
+            --argjson pr_number "$PR_NUMBER" \
+            --arg pr_title "$PR_TITLE" \
+            --arg pr_url "$PR_URL" \
+            --arg sha "$SHA" \
+            '{repo: $repo, pr_number: $pr_number, pr_title: $pr_title, pr_url: $pr_url, sha: $sha}')
+
+          curl -sf -X POST "$SLACK_BOT_WEBHOOK_URL/webhooks/deploy-success" \
+            -H "Authorization: Bearer $DEPLOY_WEBHOOK_SECRET" \
             -H "Content-Type: application/json" \
-            -d '{
-              "repo": "${{ github.repository }}",
-              "pr_number": ${{ github.event.pull_request.number }},
-              "pr_title": ${{ toJSON(github.event.pull_request.title) }},
-              "pr_url": "${{ github.event.pull_request.html_url }}",
-              "sha": "${{ github.event.pull_request.head.sha }}"
-            }'
+            -d "$PAYLOAD"

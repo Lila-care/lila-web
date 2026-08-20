@@ -16,7 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@lila-care/design-system";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type ViewMode =
