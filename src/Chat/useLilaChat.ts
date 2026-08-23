@@ -139,10 +139,18 @@ export function useLilaChat(): UseLilaChatReturn {
           return;
         }
 
-        // Seed the greeting as the first assistant message only when the conversation is
-        // still empty — avoids re-injecting it after the user has already started typing or
-        // after loading an existing conversation.
-        if (agent.onboarding.pending && agent.onboarding.greetingMessage) {
+        // Seed the greeting as the first assistant message only for authenticated sessions,
+        // and only when the conversation is still empty — avoids re-injecting it after the
+        // user has already started typing or after loading an existing conversation. Guests
+        // never get this seeded: the backend reports `onboarding.pending` identity-agnostically
+        // (guests and authenticated users share the same FormProgress flow), but the guest
+        // empty state (EmptyState.tsx, isAuthenticated=false) is the intended first screen for
+        // them — onboarding still runs server-side once they send their first message via chat().
+        if (
+          token &&
+          agent.onboarding.pending &&
+          agent.onboarding.greetingMessage
+        ) {
           const greeting = agent.onboarding.greetingMessage;
           setMessages((prev) =>
             prev.length === 0

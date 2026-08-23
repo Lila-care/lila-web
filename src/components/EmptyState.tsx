@@ -1,18 +1,59 @@
 import { useState, KeyboardEvent } from "react";
-import { ArrowUp } from "lucide-react";
+import {
+  ArrowUp,
+  Mic,
+  Sparkles,
+  PlusCircle,
+  Smile,
+  BookOpen,
+} from "lucide-react";
 
-const SUGGESTIONS = [
-  { cat: "Bienestar", q: "¿Por qué me siento así hoy?" },
-  { cat: "Conocimiento", q: "Explícame mi ciclo" },
-  { cat: "Salud", q: "¿Es normal este síntoma?" },
-  { cat: "Diario", q: "Quiero escribir en mi diario" },
+const GUEST_SUGGESTIONS = [
+  "Prueba preguntarme sobre tu ciclo",
+  "Tips de bienestar",
+  "¿Qué puedo hacer por ti?",
+];
+
+const REGISTERED_SUGGESTIONS = [
+  {
+    icon: PlusCircle,
+    title: "Registrar mi día",
+    description: "Anota tus síntomas y emociones actuales",
+    prompt: "Quiero registrar mi día",
+  },
+  {
+    icon: Sparkles,
+    title: "Consultar mi ciclo",
+    description: "Predicciones y fase hormonal de hoy",
+    prompt: "¿En qué fase de mi ciclo estoy hoy?",
+  },
+  {
+    icon: Smile,
+    title: "¿Cómo me siento hoy?",
+    description: "Recibe consejos para mejorar tu humor",
+    prompt: "¿Cómo me siento hoy?",
+  },
+  {
+    icon: BookOpen,
+    title: "Aprender algo nuevo",
+    description: "Explora artículos sobre salud femenina",
+    prompt: "Enséñame algo nuevo sobre salud femenina",
+  },
 ];
 
 interface Props {
   onSend: (message: string) => void;
+  isAuthenticated: boolean;
+  userName?: string | null;
+  onCreateAccount?: () => void;
 }
 
-export default function EmptyState({ onSend }: Props) {
+export default function EmptyState({
+  onSend,
+  isAuthenticated,
+  userName,
+  onCreateAccount,
+}: Props) {
   const [draft, setDraft] = useState("");
 
   const handleSend = (text: string) => {
@@ -29,143 +70,175 @@ export default function EmptyState({ onSend }: Props) {
     }
   };
 
+  const firstName = userName?.split(" ")[0];
+
   return (
     <div
       data-testid="empty-state"
       style={{
         fontFamily: "'Poppins', system-ui, sans-serif",
-        background: "#FAF8FC",
+        background: "var(--surface-brand-light)",
       }}
-      className="relative flex h-full w-full flex-col overflow-hidden text-[#2A2530]"
+      className="relative flex h-full w-full flex-col overflow-hidden"
     >
-      {/* Header with logo + wordmark */}
-      <header className="relative z-10 flex items-center gap-[9px] px-[22px] py-5">
+      {/* Header with logo + wordmark — solo visible en mobile, donde el rail de nav (con su
+          propio logo) está oculto */}
+      <header className="relative z-10 flex items-center gap-[9px] px-[22px] py-5 md:hidden">
         <img
           src="/lila-logo-warm.svg"
           alt=""
           className="h-[30px] w-[30px] object-contain"
         />
-        <span className="text-[18px] font-semibold tracking-[-0.01em] text-[#4A2D6E]">
+        <span
+          className="text-[18px] font-semibold tracking-[-0.01em]"
+          style={{ color: "var(--brand-primary-dark)" }}
+        >
           lila
         </span>
       </header>
 
       {/* Hero */}
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-7 pb-0 pt-2 text-center">
-        {/* Logo with lavender glow */}
         <div
-          className="relative mb-[26px] flex items-center justify-center"
+          className="relative mb-[26px] flex items-center justify-center rounded-[40px]"
           style={{
-            width: "clamp(150px,40vw,210px)",
-            height: "clamp(150px,40vw,210px)",
+            width: "80px",
+            height: "80px",
+            background: "var(--surface-muted)",
+            boxShadow: "0px 8px 12px rgba(124,58,237,0.06)",
           }}
         >
-          <div
-            className="absolute"
-            style={{
-              width: "118%",
-              height: "118%",
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle, #B9A3E3 0%, rgba(185,163,227,0) 68%)",
-              filter: "blur(8px)",
-              animation: "lilaWGlow 6s ease-in-out infinite",
-            }}
-            aria-hidden
-          />
           <img
-            src="/lila-logo-warm.svg"
+            src="/sello_vinotinto.svg"
             alt="Lila"
-            className="relative object-contain"
-            style={{
-              width: "78%",
-              height: "78%",
-              animation: "lilaWFloat 6s ease-in-out infinite",
-            }}
+            className="object-contain"
+            style={{ width: isAuthenticated ? "56%" : "45%" }}
           />
         </div>
 
         <h1
-          className="m-0 mb-3.5 font-semibold text-[#4A2D6E]"
+          className="m-0 mb-2 font-semibold"
           style={{
-            fontSize: "clamp(26px,5vw,40px)",
+            fontSize: "28px",
             lineHeight: 1.16,
             letterSpacing: "-0.02em",
             maxWidth: "14ch",
-            textWrap: "balance" as React.CSSProperties["textWrap"],
+            color: "var(--text-primary)",
           }}
         >
-          Tu espacio para entender tu cuerpo
+          {isAuthenticated
+            ? `¡Hola${firstName ? `, ${firstName}` : ""}! ¿En qué puedo ayudarte hoy?`
+            : "¡Hola! Soy Lila, tu asistente de bienestar"}
         </h1>
         <p
-          className="m-0 text-[#8A8194]"
+          className="m-0"
           style={{
-            fontSize: "clamp(14px,2vw,18px)",
+            fontSize: "14px",
             lineHeight: 1.5,
-            maxWidth: "34ch",
+            maxWidth: isAuthenticated ? "40ch" : "34ch",
+            color: "var(--text-secondary)",
           }}
         >
-          Pregúntame lo que necesitas saber
+          {isAuthenticated
+            ? "Estoy aquí para acompañarte en tu bienestar físico y emocional."
+            : "Pregúntame lo que necesitas saber"}
         </p>
       </main>
 
-      {/* Bottom section: suggestion cards + composer */}
-      <div className="relative z-10 mx-auto w-full max-w-[640px] px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-0 flex flex-col gap-4">
-        {/* Suggestion cards */}
-        <div
-          className="mx-auto w-full"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0,1fr))",
-            gap: 12,
-            maxWidth: 520,
-          }}
-        >
-          {SUGGESTIONS.map(({ cat, q }) => (
-            <button
-              key={q}
-              type="button"
-              onClick={() => handleSend(q)}
-              className="cursor-pointer flex flex-col gap-1.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B9A3E3]"
+      {/* Bottom section: suggestions + composer */}
+      <div className="relative z-10 mx-auto w-full max-w-[640px] px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-6 flex flex-col gap-4">
+        {isAuthenticated ? (
+          <div className="mx-auto grid w-full grid-cols-1 sm:grid-cols-2 gap-3">
+            {REGISTERED_SUGGESTIONS.map(
+              ({ icon: Icon, title, description, prompt }) => (
+                <button
+                  key={title}
+                  type="button"
+                  onClick={() => handleSend(prompt)}
+                  className="flex items-center gap-3 rounded-2xl p-4 text-left border border-solid transition-shadow"
+                  style={{
+                    background: "var(--surface-default)",
+                    borderColor: "var(--border-default)",
+                    boxShadow: "0px 8px 12px rgba(124,58,237,0.06)",
+                  }}
+                >
+                  <span
+                    className="flex shrink-0 items-center justify-center rounded-2xl"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      background: "var(--surface-muted)",
+                    }}
+                  >
+                    <Icon size={16} color="var(--brand-primary)" />
+                  </span>
+                  <span className="flex flex-col gap-0.5 min-w-0">
+                    <span
+                      className="text-[13px] font-bold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {title}
+                    </span>
+                    <span
+                      className="text-[11px] truncate"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {description}
+                    </span>
+                  </span>
+                </button>
+              ),
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="mx-auto flex w-full max-w-[520px] justify-center gap-3">
+              {GUEST_SUGGESTIONS.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => handleSend(q)}
+                  className="rounded-[99px] border border-solid px-4 py-2.5 text-[13px] font-medium whitespace-nowrap"
+                  style={{
+                    background: "var(--surface-brand-light)",
+                    borderColor: "var(--border-default)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+
+            <div
+              className="flex items-center gap-4 rounded-2xl p-4"
               style={{
-                fontFamily: "inherit",
-                background: "#fff",
-                border: "1px solid rgba(74,45,110,.09)",
-                borderRadius: 14,
-                padding: 16,
-                transition:
-                  "border-color .14s ease, box-shadow .14s ease, transform .14s ease",
-              }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget;
-                el.style.borderColor = "#B9A3E3";
-                el.style.boxShadow = "0 4px 14px rgba(185,163,227,.22)";
-                el.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget;
-                el.style.borderColor = "rgba(74,45,110,.09)";
-                el.style.boxShadow = "none";
-                el.style.transform = "";
+                background: "var(--surface-brand-light)",
+                border: "1px solid var(--border-default)",
               }}
             >
-              <span
-                className="uppercase"
+              <Sparkles size={20} color="var(--brand-primary)" />
+              <p
+                className="flex-1 text-[13px] font-medium"
+                style={{ color: "var(--brand-primary)" }}
+              >
+                Crea una cuenta para guardar tu historial y personalizar tu
+                experiencia
+              </p>
+              <button
+                type="button"
+                onClick={onCreateAccount}
+                className="rounded-[10px] px-3.5 py-2 text-xs font-bold whitespace-nowrap"
                 style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: 1,
-                  color: "#B9A3E3",
+                  background: "var(--brand-primary)",
+                  color: "var(--text-on-brand)",
                 }}
               >
-                {cat}
-              </span>
-              <span style={{ fontSize: 14, fontWeight: 500, color: "#2A2530" }}>
-                {q}
-              </span>
-            </button>
-          ))}
-        </div>
+                Crear cuenta
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Composer */}
         <form
@@ -173,17 +246,12 @@ export default function EmptyState({ onSend }: Props) {
             e.preventDefault();
             handleSend(draft);
           }}
-          className="flex items-center gap-2 rounded-[26px] bg-white px-2 py-2 pl-[22px] transition-[border-color] duration-150"
+          className="flex items-center gap-4 rounded-[20px] px-5 transition-[border-color] duration-150"
           style={{
-            border: "1.5px solid transparent",
-            boxShadow: "0 2px 16px rgba(74,45,110,.08)",
-          }}
-          onFocus={(e) => {
-            (e.currentTarget as HTMLFormElement).style.borderColor = "#B9A3E3";
-          }}
-          onBlur={(e) => {
-            (e.currentTarget as HTMLFormElement).style.borderColor =
-              "transparent";
+            height: 64,
+            background: "var(--surface-default)",
+            border: "1px solid var(--border-default)",
+            boxShadow: "0px 8px 12px rgba(124,58,237,0.06)",
           }}
         >
           <input
@@ -192,48 +260,50 @@ export default function EmptyState({ onSend }: Props) {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Escríbeme..."
-            className="flex-1 bg-transparent text-[15px] text-[#2A2530] outline-none placeholder:text-[#9B93A6]"
-            style={{ fontFamily: "inherit", padding: "11px 0", border: "none" }}
-          />
-          <button
-            type="submit"
-            aria-label="Enviar"
-            className="flex h-[42px] w-[42px] flex-none cursor-pointer items-center justify-center rounded-full transition-transform duration-150"
+            className="flex-1 bg-transparent outline-none border-none"
             style={{
-              background: "#4A2D6E",
-              border: "none",
-              boxShadow: "0 3px 10px rgba(74,45,110,.28)",
+              fontFamily: "inherit",
+              fontSize: 14,
+              color: "var(--text-secondary)",
             }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.transform =
-                "scale(1.06)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.transform = "";
-            }}
-          >
-            <ArrowUp size={19} strokeWidth={2.1} color="#ffffff" />
-          </button>
+          />
+          <div className="flex items-center gap-2">
+            <span
+              className="flex items-center justify-center rounded-[18px]"
+              style={{
+                width: 36,
+                height: 36,
+                background: isAuthenticated
+                  ? "var(--surface-warm)"
+                  : "var(--surface-subtle)",
+              }}
+            >
+              <Mic size={16} color="var(--brand-primary)" />
+            </span>
+            <button
+              type="submit"
+              aria-label="Enviar"
+              className="flex items-center justify-center rounded-full"
+              style={{
+                width: 40,
+                height: 40,
+                background: "var(--brand-primary)",
+              }}
+            >
+              <ArrowUp size={16} color="var(--text-on-brand)" />
+            </button>
+          </div>
         </form>
-        <p
-          className="text-center"
-          style={{ fontSize: 11, color: "#A79FB2", margin: 0 }}
-        >
-          Lila puede equivocarse. Verifica la información importante de salud
-          con tu médica.
-        </p>
+        {!isAuthenticated && (
+          <p
+            className="text-center"
+            style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}
+          >
+            Lila puede equivocarse. Verifica la información importante de salud
+            con tu médica.
+          </p>
+        )}
       </div>
-
-      <style>{`
-        @keyframes lilaWFloat {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-7px); }
-        }
-        @keyframes lilaWGlow {
-          0%, 100% { opacity: .55; transform: scale(1); }
-          50% { opacity: .8; transform: scale(1.06); }
-        }
-      `}</style>
     </div>
   );
 }

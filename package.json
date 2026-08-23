@@ -18,7 +18,7 @@
     ]
   },
   "dependencies": {
-    "@lila-care/design-system": "^0.1.1",
+    "@lila-care/design-system": "file:../lila-design-system/packages/design-system",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
