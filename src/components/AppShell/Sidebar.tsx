@@ -131,10 +131,12 @@ function Sidebar() {
           <img
             src={picture}
             alt={name ?? email ?? "Avatar"}
+            data-testid="account-avatar"
             className="size-full object-cover"
           />
         ) : isAuthenticated ? (
           <span
+            data-testid="account-avatar-initials"
             className="text-xs font-semibold"
             style={{ color: "var(--text-on-brand)" }}
           >
@@ -171,7 +173,12 @@ function Sidebar() {
               className="flex flex-col gap-0.5 min-w-0"
               style={{ color: "var(--text-secondary)" }}
             >
-              <p className="text-sm font-bold truncate">{name || email}</p>
+              <p
+                data-testid="account-name"
+                className="text-sm font-bold truncate"
+              >
+                {name || email}
+              </p>
               <p className="text-[11px] truncate">{email}</p>
             </div>
           </div>
@@ -201,6 +208,7 @@ function Sidebar() {
               Calendario Menstrual
             </Link>
             <span
+              data-testid="popover-item-diario"
               aria-disabled="true"
               title="Próximamente"
               className="flex items-center gap-2.5 p-2 rounded-lg text-[13px] cursor-not-allowed opacity-70"

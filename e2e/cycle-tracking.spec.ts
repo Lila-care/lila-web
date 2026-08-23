@@ -112,7 +112,9 @@ async function mockAuthenticatedShell(page: Page) {
 }
 
 test.describe("Cycle tracking — navegación por sidebar", () => {
-  test("navega por las 6 rutas y resalta el item activo", async ({ page }) => {
+  test("navega por las 4 rutas del rail y resalta el item activo", async ({
+    page,
+  }) => {
     const token = fakeIdToken();
     await mockAuthenticatedShell(page);
     await seedAuthToken(page, token);
@@ -120,21 +122,24 @@ test.describe("Cycle tracking — navegación por sidebar", () => {
     await page.goto(`${BASE_URL}/hoy`);
     await expect(page.getByTestId("nav-item-hoy")).toBeVisible();
 
+    // Perfil salió del rail principal con la migración a tokens KAN-30 — se accede desde
+    // "Mi Perfil" en el popover de cuenta, no como ícono propio (cubierto por el describe
+    // "/perfil" más abajo).
     const routes: Array<{ href: string; navTestId: string }> = [
       { href: "/chat", navTestId: "nav-item-chat" },
       { href: "/calendario", navTestId: "nav-item-calendario" },
       { href: "/aprende", navTestId: "nav-item-aprende" },
-      { href: "/perfil", navTestId: "nav-item-perfil" },
       { href: "/hoy", navTestId: "nav-item-hoy" },
     ];
 
     for (const { href, navTestId } of routes) {
       await page.getByTestId(navTestId).click();
       await page.waitForURL(`${BASE_URL}${href}`);
-      // El item activo del sidebar tiene fondo lila sólido (#9B72C8) vía inline style.
+      // El item activo del sidebar tiene fondo --brand-primary (#7E3565 desde la migración
+      // a tokens KAN-30, @lila-care/design-system v0.2.0) vía inline style.
       await expect(page.getByTestId(navTestId)).toHaveCSS(
         "background-color",
-        "rgb(155, 114, 200)",
+        "rgb(126, 53, 101)",
       );
     }
   });
@@ -146,7 +151,10 @@ test.describe("Cycle tracking — navegación por sidebar", () => {
 
     await page.goto(`${BASE_URL}/hoy`);
 
-    const diario = page.getByTestId("nav-item-diario");
+    // Diario Emocional salió del rail principal del sidebar con la migración a tokens KAN-30
+    // — ahora vive dentro del popover de cuenta, siempre deshabilitado ("Próximamente").
+    await page.getByTestId("user-avatar-trigger").click();
+    const diario = page.getByTestId("popover-item-diario");
     await expect(diario).toBeVisible();
     await expect(diario).toHaveAttribute("aria-disabled", "true");
     await diario.click({ force: true });
@@ -166,7 +174,9 @@ test.describe("/hoy", () => {
     await page.goto(`${BASE_URL}/hoy`);
 
     await expect(page.getByTestId("phase-hero-card")).toBeVisible();
-    await expect(page.getByTestId("phase-hero-cycle-day")).toContainText("Día 3");
+    await expect(page.getByTestId("phase-hero-cycle-day")).toContainText(
+      "Día 3",
+    );
     await expect(page.getByTestId("week-strip")).toBeVisible();
     await expect(page.getByTestId("week-strip-day")).toHaveCount(7);
   });
@@ -557,7 +567,9 @@ test.describe("Responsive 768px — DataPrivacyCard no se comprime con el sideba
 
     // Sin overflow horizontal a 768px tampoco.
     const hasOverflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
     );
     expect(hasOverflow).toBe(false);
   });
@@ -609,14 +621,23 @@ test.describe("Responsive 768px — CycleCard no comprime el aviso de 'Tu ciclo'
 
     // Sin overflow horizontal a 768px tampoco.
     const hasOverflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth,
     );
     expect(hasOverflow).toBe(false);
   });
 });
 
 test.describe("Responsive 375px — sin overflow horizontal", () => {
-  const routes = ["/hoy", "/chat", "/calendario", "/aprende", "/perfil", "/perfil/privacidad"];
+  const routes = [
+    "/hoy",
+    "/chat",
+    "/calendario",
+    "/aprende",
+    "/perfil",
+    "/perfil/privacidad",
+  ];
 
   for (const route of routes) {
     test(`${route} no tiene overflow horizontal en 375px`, async ({ page }) => {
@@ -629,7 +650,9 @@ test.describe("Responsive 375px — sin overflow horizontal", () => {
       await page.waitForLoadState("networkidle");
 
       const hasOverflow = await page.evaluate(
-        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
       );
       expect(hasOverflow).toBe(false);
     });
