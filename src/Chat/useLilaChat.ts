@@ -71,8 +71,15 @@ export function useLilaChat(): UseLilaChatReturn {
     return agent;
   }, [token]);
 
-  // Fetch config and agent/me on mount
+  // Fetch config and agent/me on mount; also re-runs on auth change (login/logout).
+  // Reset chat state first so stale messages from the previous session never leak through
+  // the `prev.length === 0` guards in the message-seeding branches below.
   useEffect(() => {
+    setMessages([]);
+    setConversationId(null);
+    setError(null);
+    setIsCheckingOnboarding(true);
+
     getConfig()
       .then((cfg) => {
         setFreeQuestionLimit(cfg.freeQuestionLimit);
