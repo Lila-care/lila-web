@@ -75,7 +75,10 @@ function ChatPage() {
           }}
         >
           {!isEmptyState && (
-            <div className="px-4 pt-4 md:px-0 md:pt-0">
+            <div
+              className="px-4 pt-4 md:px-0 md:pt-0"
+              style={{ background: "var(--surface-brand-light)" }}
+            >
               <ChatHeader />
             </div>
           )}
