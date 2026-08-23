@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import { useEffect, useRef, KeyboardEvent } from "react";
 import { ArrowUp } from "lucide-react";
 import type { ChatMessage } from "@/api/lila";
 import MessageBubble from "./MessageBubble";
@@ -7,7 +7,9 @@ import EmptyState from "@/components/EmptyState";
 interface ChatWindowProps {
   messages: ChatMessage[];
   isLoading: boolean;
-  onSend: (text: string) => void;
+  // Resolves `false` when the message was blocked or failed (login/upgrade gate, network
+  // error) — in that case `useLilaChat` has already restored the text into `draftText` itself.
+  onSend: (text: string) => Promise<boolean>;
   onboardingPending?: boolean;
   // True until the initial `agent/me` onboarding check (mount-time) has resolved. While true,
   // neither EmptyState nor its chips/composer must render — sending before this resolves races
@@ -17,6 +19,11 @@ interface ChatWindowProps {
     formId: string,
     answers: { questionId: string; answerText: string }[],
   ) => Promise<void>;
+  // Lifted into `useLilaChat` rather than local component state: with zero messages this
+  // component renders `EmptyState` instead, which fully unmounts/remounts across the
+  // optimistic add-then-remove of a rejected send — local state wouldn't survive that.
+  draftText: string;
+  onDraftChange: (v: string) => void;
 }
 
 function TypingIndicator() {
@@ -72,19 +79,22 @@ function ChatWindow({
   onboardingPending = false,
   isCheckingOnboarding = false,
   onConfirmReconciliation,
+  draftText,
+  onDraftChange,
 }: ChatWindowProps) {
-  const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  const handleSend = () => {
-    const text = input.trim();
+  const handleSend = async () => {
+    const text = draftText.trim();
     if (!text || isLoading) return;
-    setInput("");
-    onSend(text);
+    onDraftChange("");
+    // `useLilaChat` restores `draftText` itself when this resolves `false` — nothing else to
+    // do here.
+    await onSend(text);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -143,7 +153,11 @@ function ChatWindow({
   if (messages.length === 0 && !isLoading && !onboardingPending) {
     return (
       <div className="flex flex-col h-full">
-        <EmptyState onSend={onSend} />
+        <EmptyState
+          onSend={onSend}
+          draftText={draftText}
+          onDraftChange={onDraftChange}
+        />
       </div>
     );
   }
@@ -196,8 +210,8 @@ function ChatWindow({
           }}
         >
           <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={draftText}
+            onChange={(e) => onDraftChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Escríbeme..."
             rows={1}
@@ -212,17 +226,18 @@ function ChatWindow({
           />
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
+            disabled={!draftText.trim() || isLoading}
             aria-label="Enviar"
             className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full disabled:opacity-40 transition-transform duration-150"
             style={{
               background: "#4A2D6E",
               border: "none",
               boxShadow: "0 3px 10px rgba(74,45,110,.28)",
-              cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
+              cursor:
+                draftText.trim() && !isLoading ? "pointer" : "not-allowed",
             }}
             onMouseEnter={(e) => {
-              if (!input.trim() || isLoading) return;
+              if (!draftText.trim() || isLoading) return;
               (e.currentTarget as HTMLButtonElement).style.transform =
                 "scale(1.06)";
             }}

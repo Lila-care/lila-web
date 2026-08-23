@@ -29,12 +29,20 @@ const columns: ColumnDef<LilaForm>[] = [
   {
     accessorKey: "status",
     header: "Estado",
-    cell: ({ row }) => <FormStatusBadge status={row.original.status} />,
+    cell: ({ row }) => (
+      <div className="flex items-center">
+        <FormStatusBadge status={row.original.status} />
+      </div>
+    ),
   },
   {
     accessorKey: "version",
     header: "Versión",
-    cell: ({ row }) => <span>v{row.original.version}</span>,
+    cell: ({ row }) => (
+      <span className="text-sm tabular-nums text-neutral-500">
+        v{row.original.version}
+      </span>
+    ),
   },
   {
     accessorKey: "questions",
@@ -56,15 +64,15 @@ export function FormsTable({ data, onSelectForm }: FormsTableProps) {
   });
 
   return (
-    <div className="rounded-lg border border-gray-200 shadow-sm">
-      <Table>
-        <TableHeader className="bg-gray-50">
+    <div className="rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+      <Table aria-label="Tabla de forms">
+        <TableHeader className="bg-secondary">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className="text-gray-700! font-semibold"
+                  className="text-xs font-semibold uppercase tracking-wide text-neutral-600"
                 >
                   {flexRender(
                     header.column.columnDef.header,
@@ -80,12 +88,21 @@ export function FormsTable({ data, onSelectForm }: FormsTableProps) {
           {table.getRowModel().rows.map((row) => (
             <TableRow
               key={row.id}
-              className="hover:bg-gray-50 text-text cursor-pointer"
+              className="cursor-pointer hover:bg-secondary/60 transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:outline-none"
               onClick={() => onSelectForm(row.original.formId)}
+              tabIndex={0}
+              role="button"
+              aria-label={`Ver detalle de ${row.original.name}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectForm(row.original.formId);
+                }
+              }}
               data-testid="form-row"
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
+                <TableCell key={cell.id} className="py-4">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}

@@ -6,7 +6,7 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-// Shell compartido por /hoy, /calendario, /aprende, /perfil y /perfil/privacidad — sidebar fijo
+// Shell compartido por /today, /calendar, /learn, /profile y /profile/privacy — sidebar fijo
 // en desktop (>=768px), menú hamburguesa en mobile. /chat usa su propio layout (rail de
 // conversaciones adicional) pero también monta <Sidebar /> para el nav principal.
 function AppShell({ children }: AppShellProps) {

@@ -1,9 +1,19 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Home, MessageCircle, Calendar, BookOpen, Sprout, UserCircle2 } from "lucide-react";
+import {
+  Menu,
+  X,
+  Home,
+  MessageCircle,
+  Calendar,
+  BookOpen,
+  Sprout,
+  UserCircle2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
+  id: string;
   label: string;
   href: string;
   icon: typeof Home;
@@ -11,12 +21,18 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Hoy", href: "/hoy", icon: Home },
-  { label: "Chat", href: "/chat", icon: MessageCircle },
-  { label: "Calendario", href: "/calendario", icon: Calendar },
-  { label: "Diario", href: "#", icon: BookOpen, disabled: true },
-  { label: "Aprende", href: "/aprende", icon: Sprout },
-  { label: "Perfil", href: "/perfil", icon: UserCircle2 },
+  { id: "today", label: "Hoy", href: "/today", icon: Home, disabled: true },
+  { id: "chat", label: "Chat", href: "/chat", icon: MessageCircle },
+  { id: "calendar", label: "Calendario", href: "/calendar", icon: Calendar },
+  { id: "journal", label: "Diario", href: "#", icon: BookOpen, disabled: true },
+  {
+    id: "learn",
+    label: "Aprende",
+    href: "/learn",
+    icon: Sprout,
+    disabled: true,
+  },
+  { id: "profile", label: "Perfil", href: "/profile", icon: UserCircle2 },
 ];
 
 // Menú hamburguesa para viewports < md (768px) — el Sidebar fijo se oculta con `hidden md:flex`.
@@ -59,7 +75,10 @@ function MobileNav() {
           />
           <div
             className="italic font-bold text-xl leading-none"
-            style={{ fontFamily: "'Playfair Display', serif", color: "#9B72C8" }}
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              color: "#9B72C8",
+            }}
           >
             Lila
           </div>
@@ -72,8 +91,8 @@ function MobileNav() {
             if (item.disabled) {
               return (
                 <span
-                  key={item.label}
-                  data-testid={`mobile-nav-item-${item.label.toLowerCase()}`}
+                  key={item.id}
+                  data-testid={`mobile-nav-item-${item.id}`}
                   title="Próximamente"
                   aria-disabled="true"
                   className="flex items-center gap-3 px-3.5 py-[11px] rounded-xl text-[14.5px] font-medium cursor-not-allowed opacity-50"
@@ -87,10 +106,10 @@ function MobileNav() {
 
             return (
               <Link
-                key={item.label}
+                key={item.id}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                data-testid={`mobile-nav-item-${item.label.toLowerCase()}`}
+                data-testid={`mobile-nav-item-${item.id}`}
                 className="flex items-center gap-3 px-3.5 py-[11px] rounded-xl text-[14.5px] font-medium"
                 style={
                   isActive

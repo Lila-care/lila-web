@@ -6,7 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: var(--font-family-base);
   line-height: 1.5;
   font-weight: 400;
 
@@ -17,6 +17,212 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* ============================================================
+     LILA CARE — DESIGN TOKENS
+     Paleta base: https://coolors.co/7e3565-b793c6-f7f4ab-3a7d44-ec7357
+     ============================================================ */
+
+  /* ----------------------------------------------------------
+     1. COLOR — rampas primitivas (50–900)
+     Generadas a partir de los 5 hex base, misma curva de
+     luminosidad para las 5 familias → coherencia entre escalas.
+  ---------------------------------------------------------- */
+
+  /* Plum — marca / primario */
+  --plum-50:  #FAF5F8;
+  --plum-100: #F2E8EF;
+  --plum-200: #E4CEDC;
+  --plum-300: #D9A5C7;
+  --plum-400: #C97EAF;
+  --plum-500: #BB5D9B;
+  --plum-600: #A24481;
+  --plum-700: #7E3565; /* ← hex base de la paleta */
+  --plum-800: #5A2648;
+  --plum-900: #341D2C;
+
+  /* Orchid — secundario / fase lútea */
+  --orchid-50:  #F8F6F9;
+  --orchid-100: #EFE9F1;
+  --orchid-200: #DCD0E1;
+  --orchid-300: #C7ACD3;
+  --orchid-400: #AF87C0; /* ← hex base de la paleta */
+  --orchid-500: #9B69B0;
+  --orchid-600: #814F96;
+  --orchid-700: #653E75;
+  --orchid-800: #482C53;
+  --orchid-900: #2C2032;
+
+  /* Cream — neutro cálido */
+  --cream-50:  #FCFBF3;
+  --cream-100: #F7F7E3;
+  --cream-200: #EFEDC3; /* ← hex base de la paleta */
+  --cream-300: #F4F08B;
+  --cream-400: #EFE957;
+  --cream-500: #EBE42D;
+  --cream-600: #D2CA14;
+  --cream-700: #A39D10;
+  --cream-800: #74700B;
+  --cream-900: #403F11;
+
+  /* Forest — fase folicular */
+  --forest-50:  #F5F9F6;
+  --forest-100: #E9F2EA;
+  --forest-200: #CFE3D2;
+  --forest-300: #A8D7AF;
+  --forest-400: #82C58C;
+  --forest-500: #62B66F;
+  --forest-600: #499D55;
+  --forest-700: #397A42; /* ← hex base de la paleta */
+  --forest-800: #28572F;
+  --forest-900: #1E3321;
+
+  /* Coral — fase ovulatoria */
+  --coral-50:  #FCF5F3;
+  --coral-100: #F7E7E3;
+  --coral-200: #EECBC3;
+  --coral-300: #F2A08C;
+  --coral-400: #EC765A; /* ← hex base de la paleta */
+  --coral-500: #E85331;
+  --coral-600: #CE3A17;
+  --coral-700: #A02D12;
+  --coral-800: #73200D;
+  --coral-900: #401B12;
+
+  /* ----------------------------------------------------------
+     2. COLOR — tokens semánticos (no cubiertos por el bloque
+     shadcn de abajo, que ya sirve de primary/secondary/accent/
+     success/warning/destructive)
+  ---------------------------------------------------------- */
+
+  --color-brand:            var(--plum-700);
+  --color-brand-hover:      var(--plum-800);
+  --color-brand-subtle:     var(--plum-100);
+
+  --color-accent-subtle:    var(--orchid-100);
+
+  --color-bg:               var(--cream-50);
+  --color-bg-elevated:      #FFFFFF;
+  --color-bg-highlight:     var(--cream-200);  /* marcador "hoy" */
+
+  --color-text-primary:     var(--plum-900);
+  --color-text-secondary:   #6B5A63;           /* plum-900 desaturado */
+  --color-text-on-brand:    var(--cream-50);
+
+  --color-danger:           #C7401F;           /* fuera de paleta, uso puntual */
+
+  /* CTA Lila — orchid-400 para CTAs de landing/marketing, diferenciado del
+     --color-brand (plum-700) del panel admin. */
+  --color-cta:              var(--orchid-400);  /* #AF87C0 */
+  --color-cta-hover:        var(--orchid-500);  /* #9B69B0 */
+  --color-cta-foreground:   var(--cream-50);    /* #FCFBF3 — texto claro sobre orchid */
+
+  /* Fases del ciclo — el elemento firma del sistema */
+  --color-phase-menstrual:  var(--plum-700);
+  --color-phase-follicular:  var(--forest-700);
+  --color-phase-ovulatory: var(--coral-400);
+  --color-phase-luteal:      var(--orchid-400);
+
+  /* ----------------------------------------------------------
+     3. ELEVACIÓN
+     Sombras con tinte plum (no negro puro) para que la
+     profundidad se sienta parte de la paleta.
+  ---------------------------------------------------------- */
+
+  --shadow-color: 126, 53, 101; /* rgb de --plum-700 */
+
+  --shadow-xs: 0 1px 2px rgba(var(--shadow-color), 0.06);
+  --shadow-sm: 0 1px 3px rgba(var(--shadow-color), 0.10),
+               0 1px 2px rgba(var(--shadow-color), 0.06);
+  --shadow-md: 0 4px 8px rgba(var(--shadow-color), 0.12),
+               0 2px 4px rgba(var(--shadow-color), 0.08);
+  --shadow-lg: 0 12px 24px rgba(var(--shadow-color), 0.16),
+               0 4px 8px rgba(var(--shadow-color), 0.08);
+  --shadow-focus: 0 0 0 3px rgba(var(--shadow-color), 0.25);
+
+  /* Uso sugerido:
+     xs  → chips, badges en reposo
+     sm  → botones default, cards en reposo
+     md  → cards hover, dropdowns
+     lg  → modales, popovers flotantes
+     focus → anillo de foco accesible (reemplaza outline default) */
+
+  /* ----------------------------------------------------------
+     4. SPACING
+     Escala base 4px. Nombrar por función, no solo por número,
+     ayuda a que el equipo no "invente" valores intermedios.
+  ---------------------------------------------------------- */
+
+  --space-1: 4px;   /* micro — entre ícono y texto */
+  --space-2: 8px;   /* compacto — padding interno de chip/badge */
+  --space-3: 12px;  /* padding interno de botón default */
+  --space-4: 16px;  /* padding interno de card */
+  --space-5: 24px;  /* separación entre bloques dentro de una sección */
+  --space-6: 32px;  /* separación entre secciones */
+  --space-7: 48px;  /* separación entre bloques de página */
+  --space-8: 64px;  /* margen de layout / hero */
+
+  /* ----------------------------------------------------------
+     5. RADIOS
+     --radius-sm/md/lg ya existen (ver bloque @theme inline más
+     abajo, derivados de --radius). Solo se agrega --radius-pill,
+     que no tiene equivalente en esa escala.
+  ---------------------------------------------------------- */
+
+  --radius-pill: 999px; /* chips, botón "Ver calendario completo" */
+
+  /* ----------------------------------------------------------
+     6. TIPOGRAFÍA
+     Poppins (Google Fonts) como única familia — display y body.
+     Escala modular 1.25 sobre 16px base. Ya se carga via <link>
+     en index.html (300–700), sin @import adicional acá.
+  ---------------------------------------------------------- */
+
+  --font-family-base: 'Poppins', sans-serif;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 25px;
+  --font-size-2xl: 31px;
+
+  /* Light-mode semantic tokens for shadcn/ui primitives. The admin panel has no dark
+     mode toggle, so this is the only palette that ever applies to it — without it,
+     `border-border`/`bg-card`/`ring-ring`/etc. (applied globally in @layer base and by
+     every shadcn primitive) resolve to an empty custom property. Values from the
+     coolors.co brand palette (Royal Plum #7e3565, Amethyst Smoke #b793c6, Vanilla
+     Custard #f7f4ab, Fern #3a7d44, Burnt Peach #ec7357) — foreground pairings chosen
+     for WCAG AA contrast against each background, not shadcn's generic zinc defaults. */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.205 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.205 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.205 0 0);
+  --primary: #7e3565;
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: #b793c6;
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: var(--orchid-400);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: #3a7d44;
+  --success-foreground: oklch(0.985 0 0);
+  --warning: var(--coral-500);
+  --warning-foreground: oklch(0.205 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: #7e3565;
+  --radius: 0.5rem;
 }
 
 a {
@@ -30,25 +236,33 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  font-family: "DM Sans", sans-serif;
+  font-family: var(--font-family-base);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #d8d9b1;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* @layer base (no unlayered, como en la plantilla original de Vite): sin esto, estas
+   reglas siempre le ganan a las utilidades de Tailwind (rounded, font-weight, padding)
+   sobre button, sin importar el orden en el que aparezcan — la cascada de layers
+   prioriza cualquier utilidad layered sobre una declaración unlayered. Ver
+   .design-sync/NOTES.md, "Real app bug found": esto rompía Checkbox/Collapsible y,
+   antes de este fix, también el tamaño/radius/peso reales del Button variant cta. */
+@layer base {
+  button {
+    border-radius: 8px;
+    border: 1px solid transparent;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.25s;
+  }
+  button:hover {
+    border-color: #d8d9b1;
+  }
+  button:focus,
+  button:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+  }
 }
 
 @media (prefers-color-scheme: light) {
@@ -64,5 +278,98 @@ button:focus-visible {
   }
 }
 
-/* Tokens (@theme inline / .dark / @layer base) now come from
-   @lila-care/design-system/tokens.css, imported above. */
+/* Tokens (@theme inline / .dark / @layer base) come from
+   @lila-care/design-system/tokens.css, imported above. The block below overrides
+   --color-secondary/--color-accent and adds .dark --success/--warning, which are
+   newer than the published package snapshot — remove once the package is republished
+   with these values. */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: #828282;
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-text: #828282;
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --success: #3a7d44;
+  --success-foreground: oklch(0.985 0 0);
+  --warning: var(--coral-500);
+  --warning-foreground: oklch(0.205 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

@@ -23,6 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
+# Environment variables
+.env
+.env.*
+!.env.example
+
 # Google OAuth credentials
 client_secret*.json
 
@@ -41,3 +46,10 @@ playwright-report/
 blob-report/
 playwright/.cache/
 .vercel
+
+# design-sync
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

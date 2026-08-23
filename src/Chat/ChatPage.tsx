@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Menu, X, Bell, MoreVertical } from "lucide-react";
+import { Menu, X, Bell, Calendar, MoreVertical } from "lucide-react";
 import { useAuth } from "@/auth/AuthContext";
-import { getConversations } from "@/api/lila";
+import { getConversations, deleteConversation } from "@/api/lila";
 import type { ConversationSummary } from "@/api/lila";
 import Sidebar from "@/components/AppShell/Sidebar";
 import MobileNav from "@/components/AppShell/MobileNav";
@@ -10,11 +10,13 @@ import ChatWindow from "./ChatWindow";
 import ConversationList from "./ConversationList";
 import LoginGateModal from "./LoginGateModal";
 import UpgradeGateModal from "./UpgradeGateModal";
+import CalendarSnapshotCard from "./CalendarSnapshotCard";
 
 function ChatPage() {
   const { token } = useAuth();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showCalendarCard, setShowCalendarCard] = useState(false);
 
   const {
     messages,
@@ -34,6 +36,9 @@ function ChatPage() {
     loadConversation,
     startNewConversation,
     confirmReconciliation,
+    refreshSubscriptionStatus,
+    draftText,
+    setDraftText,
   } = useLilaChat();
 
   // Load conversations list on mount (only for authenticated users)
@@ -57,6 +62,24 @@ function ChatPage() {
     setSidebarOpen(false);
   };
 
+  const handleDeleteConversation = async (id: string) => {
+    if (!token) return;
+    const confirmed = window.confirm(
+      "¿Quieres eliminar esta conversación? Esta acción no se puede deshacer.",
+    );
+    if (!confirmed) return;
+
+    try {
+      await deleteConversation(token, id);
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (id === conversationId) {
+        startNewConversation();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleNewConversation = () => {
     if (!token && messages.length > 0) {
       const confirmed = window.confirm(
@@ -75,8 +98,10 @@ function ChatPage() {
       className="flex h-screen overflow-hidden"
       style={{ background: "#FAF8FC" }}
     >
-      {/* Shell principal — nav Hoy/Chat/Calendario/Aprende/Perfil, compartido con el resto de la app */}
-      <Sidebar />
+      {/* Shell principal — nav Today/Chat/Calendar/Learn/Profile, compartido con el resto de la app.
+          Colapsado por defecto en /chat: ya existe el rail de conversaciones, así que mostrar
+          ambos sidebars a la vez duplica el espacio lateral. */}
+      <Sidebar collapsible />
       <MobileNav />
 
       {/* Rail de conversaciones — específico de /chat, se mantiene independiente del nav principal */}
@@ -97,6 +122,7 @@ function ChatPage() {
             currentId={conversationId}
             onSelect={handleSelectConversation}
             onNew={handleNewConversation}
+            onDelete={handleDeleteConversation}
             isAuthenticated={!!token}
           />
         </div>
@@ -137,6 +163,18 @@ function ChatPage() {
 
             <div className="hidden md:flex items-center gap-1">
               <button
+                onClick={() => setShowCalendarCard((v) => !v)}
+                aria-label="Ver mi calendario"
+                data-testid="chat-calendar-toggle"
+                className="w-9 h-9 rounded-[10px] flex items-center justify-center transition-colors"
+                style={{
+                  color: showCalendarCard ? "#4A2D6E" : "#6B6377",
+                  background: showCalendarCard ? "#F3EDF7" : undefined,
+                }}
+              >
+                <Calendar size={19} />
+              </button>
+              <button
                 className="w-9 h-9 rounded-[10px] flex items-center justify-center transition-colors"
                 style={{ color: "#6B6377" }}
               >
@@ -164,6 +202,16 @@ function ChatPage() {
           className="relative flex-1 overflow-hidden"
           style={{ background: "#FAF8FC" }}
         >
+          {/* Snapshot del calendario, mismo componente que usa /calendar (MonthGrid) en su
+              variante "compact" — se abre/cierra con el botón de calendario del header. */}
+          {showCalendarCard && (
+            <div className="absolute top-4 right-4 z-30 w-[320px] max-w-[calc(100vw-2rem)]">
+              <CalendarSnapshotCard
+                onClose={() => setShowCalendarCard(false)}
+              />
+            </div>
+          )}
+
           {/* Floating mobile menu button — empty state has its own header without one */}
           {isEmptyState && (
             <button
@@ -188,6 +236,8 @@ function ChatPage() {
               onboardingPending={onboardingPending}
               isCheckingOnboarding={isCheckingOnboarding}
               onConfirmReconciliation={confirmReconciliation}
+              draftText={draftText}
+              onDraftChange={setDraftText}
             />
           )}
         </div>
@@ -206,6 +256,7 @@ function ChatPage() {
         <UpgradeGateModal
           upgradePromptLimit={upgradePromptLimit}
           onClose={() => setShowUpgradeGate(false)}
+          onSubscribed={refreshSubscriptionStatus}
         />
       )}
     </div>

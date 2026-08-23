@@ -297,3 +297,90 @@ test.describe("Admin Forms — pasar a borrador (unpublish)", () => {
     expect(unpublishCalled).toBe(false);
   });
 });
+
+test.describe("Admin Forms — pregunta de tipo fecha, checkbox 'No permitir fechas futuras'", () => {
+  test("el checkbox solo aparece para preguntas type=date y se persiste al guardar", async ({
+    page,
+  }) => {
+    await seedAuthToken(page);
+
+    let createdBody: Record<string, unknown> | null = null;
+    let forms: Record<string, unknown>[] = [];
+
+    await page.route(`${API_URL}/lila/forms`, async (route) => {
+      if (route.request().method() === "GET") {
+        await fulfillJson(route, forms);
+        return;
+      }
+      if (route.request().method() === "POST") {
+        createdBody = route.request().postDataJSON();
+        const created = {
+          ...DRAFT_FORM,
+          name: createdBody.name,
+          questions: (createdBody.questions as Record<string, unknown>[]).map(
+            (q, i) => ({ id: `q${i}`, order: i, ...q }),
+          ),
+        };
+        forms = [created];
+        await fulfillJson(route, created, 201);
+        return;
+      }
+      throw new Error(`Unexpected method ${route.request().method()}`);
+    });
+
+    await page.goto(`${BASE_URL}/admin/forms`);
+    await page.getByTestId("forms-create-button").click();
+    await expect(page.getByTestId("form-editor")).toBeVisible();
+
+    await page.getByTestId("form-name").fill("Form con fecha");
+    await page.getByTestId("form-description").fill("desc");
+    await page.getByTestId("form-objective").fill("obj");
+
+    await page.getByTestId("question-add").click();
+    await page.getByTestId("question-text").fill("¿Cuándo empezó tu ciclo?");
+    await page.getByTestId("question-key").fill("lastPeriodDate");
+
+    // Default type is "text" — the checkbox must not be present yet.
+    await expect(page.getByTestId("question-disallow-future")).toHaveCount(0);
+
+    // Switch the question type to "date" via the shadcn Select.
+    await page.getByTestId("question-type").click();
+    await page.getByRole("option", { name: "date" }).click();
+
+    await expect(page.getByTestId("question-disallow-future")).toBeVisible();
+    await page.getByTestId("question-disallow-future").click();
+
+    await page.getByTestId("form-save-button").click();
+
+    await expect(page.getByTestId("form-row")).toHaveCount(1);
+    expect(createdBody).not.toBeNull();
+    const savedQuestion = (
+      createdBody as unknown as { questions: Record<string, unknown>[] }
+    ).questions[0];
+    expect(savedQuestion.config).toMatchObject({
+      type: "date",
+      disallowFuture: true,
+    });
+  });
+
+  test("el checkbox desaparece si se cambia el tipo de vuelta a uno distinto de date", async ({
+    page,
+  }) => {
+    await seedAuthToken(page);
+    await page.route(`${API_URL}/lila/forms`, (route) =>
+      fulfillJson(route, []),
+    );
+
+    await page.goto(`${BASE_URL}/admin/forms`);
+    await page.getByTestId("forms-create-button").click();
+    await page.getByTestId("question-add").click();
+
+    await page.getByTestId("question-type").click();
+    await page.getByRole("option", { name: "date" }).click();
+    await expect(page.getByTestId("question-disallow-future")).toBeVisible();
+
+    await page.getByTestId("question-type").click();
+    await page.getByRole("option", { name: "number" }).click();
+    await expect(page.getByTestId("question-disallow-future")).toHaveCount(0);
+  });
+});

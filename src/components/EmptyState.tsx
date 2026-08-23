@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from "react";
+import { KeyboardEvent } from "react";
 import { ArrowUp } from "lucide-react";
 
 const SUGGESTIONS = [
@@ -9,23 +9,33 @@ const SUGGESTIONS = [
 ];
 
 interface Props {
-  onSend: (message: string) => void;
+  // Resolves `false` when the message was blocked (login/upgrade gate) or failed — in that
+  // case `useLilaChat` has already restored the text into `draftText` itself.
+  onSend: (message: string) => Promise<boolean>;
+  // Lifted into `useLilaChat` (not local state here): this component fully unmounts/remounts
+  // when `messages` toggles between empty and non-empty, which happens on every send attempt
+  // (optimistic add) and on a rejected one (removed again) — local state wouldn't survive that
+  // round trip, so the draft has to live one level up, in the hook.
+  draftText: string;
+  onDraftChange: (v: string) => void;
 }
 
-export default function EmptyState({ onSend }: Props) {
-  const [draft, setDraft] = useState("");
-
-  const handleSend = (text: string) => {
+export default function EmptyState({
+  onSend,
+  draftText,
+  onDraftChange,
+}: Props) {
+  const handleSend = async (text: string) => {
     const value = text.trim();
     if (!value) return;
-    onSend(value);
-    setDraft("");
+    onDraftChange("");
+    await onSend(value);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend(draft);
+      handleSend(draftText);
     }
   };
 
@@ -171,7 +181,7 @@ export default function EmptyState({ onSend }: Props) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleSend(draft);
+            handleSend(draftText);
           }}
           className="flex items-center gap-2 rounded-[26px] bg-white px-2 py-2 pl-[22px] transition-[border-color] duration-150"
           style={{
@@ -188,8 +198,8 @@ export default function EmptyState({ onSend }: Props) {
         >
           <input
             type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            value={draftText}
+            onChange={(e) => onDraftChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Escríbeme..."
             className="flex-1 bg-transparent text-[15px] text-[#2A2530] outline-none placeholder:text-[#9B93A6]"
