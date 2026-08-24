@@ -62,7 +62,7 @@ const EMPTY_STATS = buildStats(30, {
 });
 
 test.describe("Admin Dashboard — stats", () => {
-  test("happy path — muestra hero, retención, engagement y tendencia", async ({
+  test("happy path — muestra la fila de KPIs (nuevas usuarias, activas, retención, conversaciones, reportes de ciclo)", async ({
     page,
   }) => {
     await seedAuthToken(page);
@@ -72,12 +72,15 @@ test.describe("Admin Dashboard — stats", () => {
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
-    await expect(page.getByTestId("new-users-total")).toHaveText("12");
-    await expect(page.getByTestId("retention-value")).toHaveText("50%");
-    await expect(page.getByTestId("stat-active-users")).toContainText("40");
-    await expect(page.getByTestId("stat-cycle-reports")).toContainText("18");
-    await expect(page.getByTestId("stat-conversations")).toContainText("30");
-    await expect(page.getByTestId("trend-section")).toBeVisible();
+    await expect(page.getByTestId("kpi-card-new-users")).toContainText("12");
+    await expect(page.getByTestId("kpi-card-active-users")).toContainText("40");
+    await expect(page.getByTestId("kpi-card-retention")).toContainText("50%");
+    await expect(page.getByTestId("kpi-card-conversations")).toContainText(
+      "30",
+    );
+    await expect(page.getByTestId("kpi-card-cycle-reports")).toContainText(
+      "18",
+    );
   });
 
   test("estado vacío — sin actividad en absoluto", async ({ page }) => {
@@ -111,7 +114,7 @@ test.describe("Admin Dashboard — stats", () => {
     await page.getByRole("button", { name: "Reintentar" }).click();
 
     await expect(page.getByTestId("dashboard-error")).toHaveCount(0);
-    await expect(page.getByTestId("new-users-total")).toHaveText("12");
+    await expect(page.getByTestId("kpi-card-new-users")).toContainText("12");
   });
 
   test("cambio de rango — refetch mantiene datos visibles y anuncia el resultado", async ({
@@ -130,12 +133,12 @@ test.describe("Admin Dashboard — stats", () => {
     });
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
-    await expect(page.getByTestId("new-users-total")).toHaveText("30");
+    await expect(page.getByTestId("kpi-card-new-users")).toContainText("30");
 
     await page.getByTestId("range-selector").click();
     await page.getByRole("option", { name: "7 días" }).click();
 
-    await expect(page.getByTestId("new-users-total")).toHaveText("7");
+    await expect(page.getByTestId("kpi-card-new-users")).toContainText("7");
     await expect(page.getByTestId("dashboard-live-region")).toHaveText(
       "Mostrando datos de los últimos 7 días.",
     );
