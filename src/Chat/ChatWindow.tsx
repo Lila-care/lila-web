@@ -79,10 +79,26 @@ function ChatWindow({
   const [, navigate] = useLocation();
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isInitialLoadingRender = useRef(true);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // `disabled={isLoading}` below force-blurs the textarea the instant a send starts (browsers
+  // drop focus from a control as soon as it's disabled) and nothing restores it afterwards —
+  // reported as "se pierde el foco del input" after pressing Enter to send. Skip the mount-time
+  // render so this doesn't steal focus from something else when the page first loads.
+  useEffect(() => {
+    if (isInitialLoadingRender.current) {
+      isInitialLoadingRender.current = false;
+      return;
+    }
+    if (!isLoading) {
+      textareaRef.current?.focus();
+    }
+  }, [isLoading]);
 
   const handleSend = () => {
     const text = input.trim();
@@ -203,6 +219,7 @@ function ChatWindow({
         >
           <Paperclip size={20} color="var(--text-secondary)" />
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

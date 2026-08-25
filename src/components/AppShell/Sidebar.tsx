@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Home,
@@ -36,10 +36,15 @@ function Sidebar() {
   const { token, email, name, picture, logout } = useAuth();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const firstItemRef = useRef<HTMLAnchorElement>(null);
+  const popoverId = useId();
   const isAuthenticated = !!token;
 
   useEffect(() => {
     if (!isPopoverOpen) return;
+
+    firstItemRef.current?.focus();
 
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -50,8 +55,19 @@ function Sidebar() {
       }
     }
 
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setIsPopoverOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isPopoverOpen]);
 
   const handleTriggerClick = () => {
@@ -68,7 +84,7 @@ function Sidebar() {
     <aside
       data-testid="app-sidebar"
       ref={containerRef}
-      className="hidden md:flex relative w-[72px] shrink-0 flex-col items-center justify-between h-screen sticky top-0 py-6 border-r border-solid"
+      className="hidden md:flex relative z-20 w-[72px] shrink-0 flex-col items-center justify-between h-screen sticky top-0 py-6 border-r border-solid"
       style={{
         background: "var(--nav-background)",
         borderColor: "var(--brand-primary-dark)",
@@ -116,9 +132,14 @@ function Sidebar() {
 
       {/* user-avatar-trigger */}
       <button
+        ref={triggerRef}
         type="button"
         onClick={handleTriggerClick}
         data-testid="user-avatar-trigger"
+        aria-label={isAuthenticated ? "Menú de cuenta" : "Iniciar sesión"}
+        aria-haspopup={isAuthenticated ? "menu" : undefined}
+        aria-expanded={isAuthenticated ? isPopoverOpen : undefined}
+        aria-controls={isPopoverOpen ? popoverId : undefined}
         className="flex flex-col items-center justify-center rounded-full size-[48px] border-2 border-solid overflow-hidden"
         style={{
           borderColor: isAuthenticated
@@ -150,8 +171,11 @@ function Sidebar() {
       {/* user-popover */}
       {isPopoverOpen && isAuthenticated && (
         <div
+          id={popoverId}
+          role="menu"
+          aria-label="Menú de cuenta"
           data-testid="user-popover"
-          className="absolute bottom-6 left-[80px] w-[260px] flex flex-col gap-3 p-4 rounded-[20px] border border-solid"
+          className="absolute bottom-6 left-[80px] z-50 w-[260px] flex flex-col gap-3 p-4 rounded-[20px] border border-solid"
           style={{
             background: "var(--surface-default)",
             borderColor: "var(--border-default)",
@@ -190,7 +214,9 @@ function Sidebar() {
 
           <div className="flex flex-col gap-0.5 w-full">
             <Link
+              ref={firstItemRef}
               href="/perfil"
+              role="menuitem"
               onClick={() => setIsPopoverOpen(false)}
               className="flex items-center gap-2.5 p-2 rounded-lg text-[13px]"
               style={{ color: "var(--brand-primary)" }}
@@ -200,6 +226,7 @@ function Sidebar() {
             </Link>
             <Link
               href="/calendario"
+              role="menuitem"
               onClick={() => setIsPopoverOpen(false)}
               className="flex items-center gap-2.5 p-2 rounded-lg text-[13px]"
               style={{ color: "var(--brand-primary)" }}
@@ -209,7 +236,9 @@ function Sidebar() {
             </Link>
             <span
               data-testid="popover-item-diario"
+              role="menuitem"
               aria-disabled="true"
+              tabIndex={-1}
               title="Próximamente"
               className="flex items-center gap-2.5 p-2 rounded-lg text-[13px] cursor-not-allowed opacity-70"
               style={{ color: "var(--brand-primary)" }}
@@ -228,6 +257,7 @@ function Sidebar() {
             </span>
             <Link
               href="/perfil"
+              role="menuitem"
               onClick={() => setIsPopoverOpen(false)}
               className="flex items-center gap-2.5 p-2 rounded-lg text-[13px]"
               style={{ color: "var(--brand-primary)" }}
@@ -244,6 +274,7 @@ function Sidebar() {
 
           <button
             type="button"
+            role="menuitem"
             onClick={() => {
               setIsPopoverOpen(false);
               logout();
