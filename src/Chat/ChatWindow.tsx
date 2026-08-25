@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowUp, Mic, Paperclip } from "lucide-react";
 import { useAuth } from "@/auth/AuthContext";
 import type { ChatMessage } from "@/api/lila";
 import MessageBubble from "./MessageBubble";
 import EmptyState from "@/components/EmptyState";
+import Composer from "@/components/Composer";
 
 interface ChatWindowProps {
   messages: ChatMessage[];
@@ -107,13 +107,6 @@ function ChatWindow({
     onSend(text);
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
   // Before `agent/me` resolves, `onboardingPending` is indistinguishable from "checked and
   // confirmed not pending" (both are `false`) — rendering EmptyState here would let the user
   // send a message or click a suggestion chip that races the backend's onboarding routing.
@@ -203,73 +196,13 @@ function ChatWindow({
           borderTop: "1px solid var(--border-default)",
         }}
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-          className="flex items-center gap-4 rounded-[20px] px-5 transition-[border-color] duration-150"
-          style={{
-            height: 64,
-            background: "var(--surface-default)",
-            border: "1px solid var(--border-default)",
-            boxShadow: "0px 8px 12px rgba(124,58,237,0.06)",
-            fontFamily: "'Poppins', system-ui, sans-serif",
-          }}
-        >
-          <Paperclip size={20} color="var(--text-secondary)" />
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Escríbeme..."
-            rows={1}
-            disabled={isLoading}
-            className="flex-1 resize-none bg-transparent outline-none disabled:opacity-50 max-h-32 overflow-y-auto"
-            style={{
-              border: "none",
-              padding: "11px 0",
-              minHeight: "44px",
-              fontFamily: "inherit",
-              fontSize: 14,
-              color: "var(--text-primary)",
-            }}
-          />
-          <div className="flex items-center gap-2">
-            <span
-              className="flex items-center justify-center rounded-[18px]"
-              style={{
-                width: 36,
-                height: 36,
-                background: "var(--surface-muted)",
-              }}
-            >
-              <Mic size={16} color="var(--brand-primary)" />
-            </span>
-            <button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              aria-label="Enviar"
-              className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full disabled:opacity-40 transition-transform duration-150"
-              style={{
-                background: "var(--brand-primary)",
-                border: "none",
-                cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
-              }}
-              onMouseEnter={(e) => {
-                if (!input.trim() || isLoading) return;
-                (e.currentTarget as HTMLButtonElement).style.transform =
-                  "scale(1.06)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.transform = "";
-              }}
-            >
-              <ArrowUp size={16} color="var(--text-on-brand)" />
-            </button>
-          </div>
-        </form>
+        <Composer
+          value={input}
+          onChange={setInput}
+          onSubmit={handleSend}
+          disabled={isLoading}
+          textareaRef={textareaRef}
+        />
       </div>
     </div>
   );

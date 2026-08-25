@@ -1,12 +1,6 @@
-import { useState, KeyboardEvent } from "react";
-import {
-  ArrowUp,
-  Mic,
-  Sparkles,
-  PlusCircle,
-  Smile,
-  BookOpen,
-} from "lucide-react";
+import { useState } from "react";
+import { Sparkles, PlusCircle, Smile, BookOpen } from "lucide-react";
+import Composer from "@/components/Composer";
 
 const GUEST_SUGGESTIONS = [
   "Prueba preguntarme sobre tu ciclo",
@@ -61,13 +55,6 @@ export default function EmptyState({
     if (!value) return;
     onSend(value);
     setDraft("");
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend(draft);
-    }
   };
 
   const firstName = userName?.split(" ")[0];
@@ -241,59 +228,11 @@ export default function EmptyState({
         )}
 
         {/* Composer */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend(draft);
-          }}
-          className="flex items-center gap-4 rounded-[20px] px-5 transition-[border-color] duration-150"
-          style={{
-            height: 64,
-            background: "var(--surface-default)",
-            border: "1px solid var(--border-default)",
-            boxShadow: "0px 8px 12px rgba(124,58,237,0.06)",
-          }}
-        >
-          <input
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Escríbeme..."
-            className="flex-1 bg-transparent outline-none border-none"
-            style={{
-              fontFamily: "inherit",
-              fontSize: 14,
-              color: "var(--text-secondary)",
-            }}
-          />
-          <div className="flex items-center gap-2">
-            <span
-              className="flex items-center justify-center rounded-[18px]"
-              style={{
-                width: 36,
-                height: 36,
-                background: isAuthenticated
-                  ? "var(--surface-warm)"
-                  : "var(--surface-subtle)",
-              }}
-            >
-              <Mic size={16} color="var(--brand-primary)" />
-            </span>
-            <button
-              type="submit"
-              aria-label="Enviar"
-              className="flex items-center justify-center rounded-full"
-              style={{
-                width: 40,
-                height: 40,
-                background: "var(--brand-primary)",
-              }}
-            >
-              <ArrowUp size={16} color="var(--text-on-brand)" />
-            </button>
-          </div>
-        </form>
+        <Composer
+          value={draft}
+          onChange={setDraft}
+          onSubmit={() => handleSend(draft)}
+        />
         {!isAuthenticated && (
           <p
             className="text-center"
