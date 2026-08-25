@@ -192,13 +192,13 @@ export default function EmptyState({
           </div>
         ) : (
           <>
-            <div className="mx-auto flex w-full max-w-[520px] justify-center gap-3">
+            <div className="mx-auto flex w-full max-w-[520px] flex-wrap justify-center gap-2">
               {GUEST_SUGGESTIONS.map((q) => (
                 <button
                   key={q}
                   type="button"
                   onClick={() => handleSend(q)}
-                  className="rounded-[99px] border border-solid px-4 py-2.5 text-[13px] font-medium whitespace-nowrap"
+                  className="max-w-full min-w-0 rounded-[99px] border border-solid px-4 py-2 text-[13px] font-medium"
                   style={{
                     background: "var(--surface-brand-light)",
                     borderColor: "var(--border-default)",
