@@ -53,9 +53,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      # Amplify (not Vercel) hosts this app, and it only auto-builds on a push to the
-      # "staging" branch itself — there's no per-PR preview environment. "staging" is a
-      # single shared slot: whichever PR gets labeled becomes what's live on
+      # Amplify hosts this app, and it only auto-builds on a push to the "staging"
+      # branch itself — there's no per-PR preview environment. "staging" is a single
+      # shared slot: whichever PR gets labeled becomes what's live on
       # staging.lilacareapp.com, so this force-pushes over whatever was there before.
       - name: Push PR branch to staging
         run: |

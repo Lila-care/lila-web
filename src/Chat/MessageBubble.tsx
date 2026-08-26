@@ -18,7 +18,10 @@ function formatTime(timestamp: string): string {
   });
 }
 
-function MessageBubble({ message, onConfirmReconciliation }: MessageBubbleProps) {
+function MessageBubble({
+  message,
+  onConfirmReconciliation,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   if (message.kind === "reconciliation" && message.data) {
@@ -42,12 +45,19 @@ function MessageBubble({ message, onConfirmReconciliation }: MessageBubbleProps)
       >
         <div className="max-w-[80%]">
           <div
-            className="rounded-[16px] rounded-br-[4px] px-[17px] py-[13px] text-[15px] leading-[1.5] text-white"
-            style={{ background: "#4A2D6E" }}
+            className="rounded-[16px] rounded-br-[4px] px-[17px] py-[13px] text-[15px] leading-[1.5]"
+            style={{
+              background: "linear-gradient(to right, #7e1f65, #942e78)",
+              color: "var(--text-on-brand)",
+              boxShadow: "0px 4px 16px rgba(126,31,101,0.2)",
+            }}
           >
             {message.content}
           </div>
-          <p className="text-xs text-[#8A8194] mt-1 text-right">
+          <p
+            className="text-xs mt-1 text-right"
+            style={{ color: "var(--text-muted)" }}
+          >
             {formatTime(message.timestamp)}
           </p>
         </div>
@@ -68,15 +78,16 @@ function MessageBubble({ message, onConfirmReconciliation }: MessageBubbleProps)
       />
       <div className="max-w-[80%]">
         <div
-          className="rounded-[16px] rounded-bl-[4px] px-[17px] py-[13px] text-[15px] leading-[1.55] text-[#2A2530] prose prose-sm max-w-none"
+          className="rounded-[16px] rounded-bl-[4px] px-[17px] py-[13px] text-[15px] leading-[1.55] prose prose-sm max-w-none"
           style={{
-            background: "#fff",
-            border: "1px solid rgba(74,45,110,.07)",
+            background: "var(--surface-brand-medium)",
+            color: "var(--text-primary)",
+            boxShadow: "0px 8px 24px rgba(124,58,237,0.06)",
           }}
         >
           <ReactMarkdown>{message.content}</ReactMarkdown>
         </div>
-        <p className="text-xs text-[#8A8194] mt-1">
+        <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
           {formatTime(message.timestamp)}
         </p>
       </div>

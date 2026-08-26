@@ -114,6 +114,9 @@ test.describe("Onboarding flow", () => {
     page,
   }) => {
     const greeting = "¡Hola! Antes de empezar, cuéntame un poco sobre ti.";
+    // La greeting solo se siembra para sesiones autenticadas (ver useLilaChat) — los guests
+    // pasan por EmptyState en su lugar, así que este escenario necesita un token.
+    const token = fakeIdToken({ email: "onboarding@lila.app" });
     let releaseAgentMe: () => void = () => {};
     const agentMeDelay = new Promise<void>((resolve) => {
       releaseAgentMe = resolve;
@@ -129,7 +132,11 @@ test.describe("Onboarding flow", () => {
         agentMeBody({ onboardingPending: true, greetingMessage: greeting }),
       );
     });
+    await page.route(`${API_URL}/lila/conversations`, (route) =>
+      fulfillJson(route, []),
+    );
 
+    await seedAuthToken(page, token);
     await page.goto(`${BASE_URL}/chat`);
 
     // While agent/me is still in flight: no interactive composer, no chips, no greeting yet.
@@ -147,7 +154,39 @@ test.describe("Onboarding flow", () => {
     await expect(page.getByTestId("onboarding-check-loading")).toHaveCount(0);
   });
 
-  test("guest nuevo ve el greetingMessage sin escribir nada", async ({
+  test("usuario autenticado ve el greetingMessage sin escribir nada", async ({
+    page,
+  }) => {
+    const greeting = "¡Hola! Antes de empezar, cuéntame un poco sobre ti.";
+    const token = fakeIdToken({ email: "greeting@lila.app" });
+
+    await page.route(`${API_URL}/lila/config`, (route) =>
+      fulfillJson(route, CONFIG_BODY),
+    );
+    await page.route(`${API_URL}/lila/agent/me`, (route) =>
+      fulfillJson(
+        route,
+        agentMeBody({ onboardingPending: true, greetingMessage: greeting }),
+      ),
+    );
+    await page.route(`${API_URL}/lila/conversations`, (route) =>
+      fulfillJson(route, []),
+    );
+
+    await seedAuthToken(page, token);
+    await page.goto(`${BASE_URL}/chat`);
+
+    // The greeting appears as the first assistant message without any user input.
+    const firstBubble = page.getByTestId("message-bubble").first();
+    await expect(firstBubble).toBeVisible();
+    await expect(firstBubble).toHaveAttribute("data-role", "assistant");
+    await expect(firstBubble).toContainText(greeting);
+
+    // The chip-based EmptyState must not render while onboarding is pending.
+    await expect(page.getByTestId("empty-state")).toHaveCount(0);
+  });
+
+  test("guest con onboarding pendiente ve el EmptyState, nunca la greeting (identity-agnostic backend)", async ({
     page,
   }) => {
     const greeting = "¡Hola! Antes de empezar, cuéntame un poco sobre ti.";
@@ -164,14 +203,10 @@ test.describe("Onboarding flow", () => {
 
     await page.goto(`${BASE_URL}/chat`);
 
-    // The greeting appears as the first assistant message without any user input.
-    const firstBubble = page.getByTestId("message-bubble").first();
-    await expect(firstBubble).toBeVisible();
-    await expect(firstBubble).toHaveAttribute("data-role", "assistant");
-    await expect(firstBubble).toContainText(greeting);
-
-    // The chip-based EmptyState must not render while onboarding is pending.
-    await expect(page.getByTestId("empty-state")).toHaveCount(0);
+    // Sin token, la greeting nunca se siembra — el guest arranca en EmptyState y el
+    // onboarding avanza server-side recién con su primer mensaje real (ver useLilaChat).
+    await expect(page.getByTestId("empty-state")).toBeVisible();
+    await expect(page.getByTestId("message-bubble")).toHaveCount(0);
   });
 
   test("EmptyState con chips aparece cuando onboarding.pending es false", async ({
@@ -217,6 +252,9 @@ test.describe("Onboarding flow", () => {
       "src",
       "https://example.com/avatar.png",
     );
+    // El nombre real solo se ve dentro del popover de cuenta (Sidebar es un rail de 72px
+    // solo-ícono desde la migración a tokens KAN-30).
+    await page.getByTestId("user-avatar-trigger").click();
     await expect(page.getByTestId("account-name")).toHaveText(
       "Camila Paciente",
     );
@@ -245,6 +283,7 @@ test.describe("Onboarding flow", () => {
 
     await expect(page.getByTestId("account-avatar-initials")).toBeVisible();
     await expect(page.getByTestId("account-avatar-initials")).toHaveText("AN");
+    await page.getByTestId("user-avatar-trigger").click();
     await expect(page.getByTestId("account-name")).toHaveText("Ana Torres");
   });
 });
@@ -284,6 +323,9 @@ test.describe("Onboarding resume (activeConversation)", () => {
     page,
   }) => {
     const greeting = "¡Hola! Antes de empezar, cuéntame un poco sobre ti.";
+    // La greeting solo se siembra para sesiones autenticadas — este caso de no-regresión
+    // vive en ese flujo (el guest equivalente está cubierto arriba, EmptyState en vez de greeting).
+    const token = fakeIdToken({ email: "no-regresion@lila.app" });
 
     await page.route(`${API_URL}/lila/config`, (route) =>
       fulfillJson(route, CONFIG_BODY),
@@ -294,7 +336,11 @@ test.describe("Onboarding resume (activeConversation)", () => {
         agentMeBody({ onboardingPending: true, greetingMessage: greeting }),
       ),
     );
+    await page.route(`${API_URL}/lila/conversations`, (route) =>
+      fulfillJson(route, []),
+    );
 
+    await seedAuthToken(page, token);
     await page.goto(`${BASE_URL}/chat`);
 
     const bubbles = page.getByTestId("message-bubble");
