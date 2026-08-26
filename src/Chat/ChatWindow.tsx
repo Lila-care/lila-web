@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState, KeyboardEvent } from "react";
-import { ArrowUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/auth/AuthContext";
 import type { ChatMessage } from "@/api/lila";
 import MessageBubble from "./MessageBubble";
 import EmptyState from "@/components/EmptyState";
+import Composer from "@/components/Composer";
 
 interface ChatWindowProps {
   messages: ChatMessage[];
   isLoading: boolean;
   onSend: (text: string) => void;
-  onboardingPending?: boolean;
   // True until the initial `agent/me` onboarding check (mount-time) has resolved. While true,
   // neither EmptyState nor its chips/composer must render — sending before this resolves races
   // the backend into skipping onboarding for the user's first message (see useLilaChat).
@@ -29,27 +30,29 @@ function TypingIndicator() {
       />
       <div
         className="rounded-[16px] rounded-bl-[4px] px-[18px] py-[15px]"
-        style={{ background: "#fff", border: "1px solid rgba(74,45,110,.07)" }}
+        style={{
+          background: "var(--surface-brand-medium)",
+        }}
       >
         <div className="flex gap-[5px] items-center">
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{
-              background: "#B9A3E3",
+              background: "var(--brand-primary)",
               animation: "lilaWDot 1.2s infinite ease-in-out",
             }}
           />
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{
-              background: "#B9A3E3",
+              background: "var(--brand-primary)",
               animation: "lilaWDot 1.2s 0.18s infinite ease-in-out",
             }}
           />
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{
-              background: "#B9A3E3",
+              background: "var(--brand-primary)",
               animation: "lilaWDot 1.2s 0.36s infinite ease-in-out",
             }}
           />
@@ -69,29 +72,39 @@ function ChatWindow({
   messages,
   isLoading,
   onSend,
-  onboardingPending = false,
   isCheckingOnboarding = false,
   onConfirmReconciliation,
 }: ChatWindowProps) {
+  const { token, name } = useAuth();
+  const [, navigate] = useLocation();
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isInitialLoadingRender = useRef(true);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // `disabled={isLoading}` below force-blurs the textarea the instant a send starts (browsers
+  // drop focus from a control as soon as it's disabled) and nothing restores it afterwards —
+  // reported as "se pierde el foco del input" after pressing Enter to send. Skip the mount-time
+  // render so this doesn't steal focus from something else when the page first loads.
+  useEffect(() => {
+    if (isInitialLoadingRender.current) {
+      isInitialLoadingRender.current = false;
+      return;
+    }
+    if (!isLoading) {
+      textareaRef.current?.focus();
+    }
+  }, [isLoading]);
 
   const handleSend = () => {
     const text = input.trim();
     if (!text || isLoading) return;
     setInput("");
     onSend(text);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
   };
 
   // Before `agent/me` resolves, `onboardingPending` is indistinguishable from "checked and
@@ -108,21 +121,21 @@ function ChatWindow({
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{
-              background: "#B9A3E3",
+              background: "var(--brand-primary)",
               animation: "lilaWDot 1.2s infinite ease-in-out",
             }}
           />
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{
-              background: "#B9A3E3",
+              background: "var(--brand-primary)",
               animation: "lilaWDot 1.2s 0.18s infinite ease-in-out",
             }}
           />
           <span
             className="w-[7px] h-[7px] rounded-full"
             style={{
-              background: "#B9A3E3",
+              background: "var(--brand-primary)",
               animation: "lilaWDot 1.2s 0.36s infinite ease-in-out",
             }}
           />
@@ -137,13 +150,20 @@ function ChatWindow({
     );
   }
 
-  // Show EmptyState (with suggestion chips) only when there are no messages, not loading, and
-  // onboarding isn't pending — during onboarding the greeting message is seeded as the first
-  // assistant message instead, so `messages` is never empty in that case.
-  if (messages.length === 0 && !isLoading && !onboardingPending) {
+  // Show EmptyState (with suggestion chips) whenever there are no messages and we're not
+  // loading. For authenticated onboarding, the greeting is seeded as the first assistant
+  // message (see useLilaChat), so `messages` is already non-empty by the time we get here and
+  // this branch is skipped naturally — no need to check `onboardingPending` directly. Guests
+  // are never seeded a greeting, so they land here and see the guest empty state instead.
+  if (messages.length === 0 && !isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <EmptyState onSend={onSend} />
+        <EmptyState
+          onSend={onSend}
+          isAuthenticated={!!token}
+          userName={name}
+          onCreateAccount={() => navigate("/login")}
+        />
       </div>
     );
   }
@@ -153,7 +173,7 @@ function ChatWindow({
       {/* Messages area */}
       <div
         className="flex-1 overflow-y-auto px-[18px] py-2"
-        style={{ background: "#FAF8FC" }}
+        style={{ background: "var(--surface-default)" }}
       >
         {messages.map((msg, i) => (
           <MessageBubble
@@ -172,67 +192,17 @@ function ChatWindow({
       <div
         className="px-4 py-3"
         style={{
-          background: "#FAF8FC",
-          borderTop: "1px solid rgba(74,45,110,.05)",
+          background: "var(--surface-default)",
+          borderTop: "1px solid var(--border-default)",
         }}
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-          className="flex items-center gap-2 rounded-[26px] bg-white px-2 py-2 pl-[22px] transition-[border-color] duration-150"
-          style={{
-            border: "1.5px solid transparent",
-            boxShadow: "0 2px 16px rgba(74,45,110,.08)",
-            fontFamily: "'Poppins', system-ui, sans-serif",
-          }}
-          onFocus={(e) => {
-            (e.currentTarget as HTMLFormElement).style.borderColor = "#B9A3E3";
-          }}
-          onBlur={(e) => {
-            (e.currentTarget as HTMLFormElement).style.borderColor =
-              "transparent";
-          }}
-        >
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Escríbeme..."
-            rows={1}
-            disabled={isLoading}
-            className="flex-1 resize-none bg-transparent text-[15px] text-[#2A2530] placeholder:text-[#9B93A6] outline-none disabled:opacity-50 max-h-32 overflow-y-auto"
-            style={{
-              border: "none",
-              padding: "11px 0",
-              minHeight: "44px",
-              fontFamily: "inherit",
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            aria-label="Enviar"
-            className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full disabled:opacity-40 transition-transform duration-150"
-            style={{
-              background: "#4A2D6E",
-              border: "none",
-              boxShadow: "0 3px 10px rgba(74,45,110,.28)",
-              cursor: input.trim() && !isLoading ? "pointer" : "not-allowed",
-            }}
-            onMouseEnter={(e) => {
-              if (!input.trim() || isLoading) return;
-              (e.currentTarget as HTMLButtonElement).style.transform =
-                "scale(1.06)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.transform = "";
-            }}
-          >
-            <ArrowUp size={18} color="#ffffff" />
-          </button>
-        </form>
+        <Composer
+          value={input}
+          onChange={setInput}
+          onSubmit={handleSend}
+          disabled={isLoading}
+          textareaRef={textareaRef}
+        />
       </div>
     </div>
   );

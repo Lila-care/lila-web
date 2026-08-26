@@ -41,3 +41,7 @@ playwright-report/
 blob-report/
 playwright/.cache/
 .vercel
+
+# Design system sync tooling/output
+.ds-sync/
+ds-bundle/

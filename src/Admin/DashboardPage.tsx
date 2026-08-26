@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Users } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarDays,
+  type LucideIcon,
+  MessageCircle,
+  Repeat,
+  UserCheck,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import AdminLayout from "@/Admin/AdminLayout";
 import { useDashboardStats } from "@/Admin/useDashboardStats";
 import { RangeSelector } from "@/Admin/RangeSelector";
-import { NewUsersHeroCard } from "@/Admin/NewUsersHeroCard";
-import { RetentionCard } from "@/Admin/RetentionCard";
-import { EngagementSection } from "@/Admin/EngagementSection";
-import { TrendSection } from "@/Admin/TrendSection";
+import { DashboardStatsDto } from "@/api/dashboard";
 import {
   Alert,
   AlertDescription,
@@ -14,46 +20,79 @@ import {
   Card,
   CardContent,
   CardHeader,
+  KPICard,
   Skeleton,
 } from "@lila-care/design-system";
 
+interface KpiCardConfig {
+  testId: string;
+  label: string;
+  value: string | number;
+  icon: LucideIcon;
+  sparklineData?: number[];
+}
+
+// The BE stats contract has no period-over-period comparison field yet, so `showDelta` stays
+// false for every card — see contract note in the FE report, not something to invent client-side.
+// Kept as a plain function (not inline JSX) so the 5 near-identical KPICard configs don't
+// duplicate the same prop block 5 times in the render tree.
+function buildKpiCards(stats: DashboardStatsDto): KpiCardConfig[] {
+  return [
+    {
+      testId: "kpi-card-new-users",
+      label: "Nuevas usuarias",
+      value: stats.newUsers.total,
+      icon: UserPlus,
+      sparklineData: stats.newUsers.byDay.map((d) => d.count),
+    },
+    {
+      testId: "kpi-card-active-users",
+      label: "Usuarias activas",
+      value: stats.activeUsers.total,
+      icon: UserCheck,
+      // No `byDay` breakdown for active users in the BE contract — nothing to chart.
+    },
+    {
+      testId: "kpi-card-retention",
+      label: "Retención 30d",
+      value: `${Math.round(stats.retention.rate * 100)}%`,
+      icon: Repeat,
+      // No time series for retention in the BE contract.
+    },
+    {
+      testId: "kpi-card-conversations",
+      label: "Conversaciones",
+      value: stats.conversations.total,
+      icon: MessageCircle,
+      sparklineData: stats.conversations.byDay.map((d) => d.count),
+    },
+    {
+      testId: "kpi-card-cycle-reports",
+      label: "Reportes de ciclo",
+      value: stats.cycleReports.total,
+      icon: CalendarDays,
+      sparklineData: stats.cycleReports.byDay.map((d) => d.count),
+    },
+  ];
+}
+
 function DashboardSkeleton() {
   return (
-    <div data-testid="dashboard-loading">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <Card className="lg:col-span-8">
-          <CardHeader>
-            <Skeleton className="h-4 w-32" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="mt-4 h-48 w-full" />
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-4">
+    <div
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5"
+      data-testid="dashboard-loading"
+    >
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Card key={i} variant="neo">
           <CardHeader>
             <Skeleton className="h-4 w-24" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="mt-3 h-8 w-16" />
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="mt-3 h-10 w-full" />
           </CardContent>
         </Card>
-      </div>
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-4 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16" />
-              <Skeleton className="mt-2 h-8 w-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <Skeleton className="mt-8 h-72 w-full rounded-xl" />
+      ))}
     </div>
   );
 }
@@ -169,36 +208,23 @@ function DashboardPage() {
               }
               data-testid="dashboard-content"
             >
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                <div className="lg:col-span-8">
-                  <NewUsersHeroCard
-                    total={stats.newUsers.total}
-                    byDay={stats.newUsers.byDay}
-                    days={stats.range.days}
-                  />
-                </div>
-                <div className="lg:col-span-4">
-                  <RetentionCard
-                    newUsersInRange={stats.retention.newUsersInRange}
-                    returned={stats.retention.returned}
-                    rate={stats.retention.rate}
-                  />
-                </div>
+              <div
+                className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5"
+                data-testid="kpi-row"
+              >
+                {buildKpiCards(stats).map((kpi) => (
+                  <div key={kpi.testId} data-testid={kpi.testId}>
+                    <KPICard
+                      label={kpi.label}
+                      value={kpi.value}
+                      icon={kpi.icon}
+                      sparklineData={kpi.sparklineData}
+                      showSparkline={!!kpi.sparklineData}
+                      showDelta={false}
+                    />
+                  </div>
+                ))}
               </div>
-
-              <EngagementSection
-                days={stats.range.days}
-                activeUsersTotal={stats.activeUsers.total}
-                cycleReports={stats.cycleReports}
-                conversations={stats.conversations}
-              />
-
-              <TrendSection
-                days={stats.range.days}
-                newUsers={stats.newUsers.byDay}
-                cycleReports={stats.cycleReports.byDay}
-                conversations={stats.conversations.byDay}
-              />
             </div>
           )}
         </div>
