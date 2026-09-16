@@ -1,5 +1,5 @@
 import { KeyboardEvent, RefObject } from "react";
-import { ArrowUp, Mic, Paperclip } from "lucide-react";
+import { ArrowUp, Loader2, Mic, Paperclip } from "lucide-react";
 
 interface ComposerProps {
   value: string;
@@ -75,8 +75,8 @@ export default function Composer({
         <button
           type="submit"
           disabled={!canSend}
-          aria-label="Enviar"
-          className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full disabled:opacity-40 transition-transform duration-150"
+          aria-label="Enviar mensaje"
+          className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full p-0 disabled:opacity-40 transition-transform duration-150 outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2"
           style={{
             background: "var(--brand-primary)",
             border: "none",
@@ -91,7 +91,16 @@ export default function Composer({
             (e.currentTarget as HTMLButtonElement).style.transform = "";
           }}
         >
-          <ArrowUp size={16} color="var(--text-on-brand)" />
+          {disabled ? (
+            <Loader2
+              size={16}
+              color="var(--text-on-brand)"
+              className="animate-spin"
+              aria-hidden="true"
+            />
+          ) : (
+            <ArrowUp size={16} color="var(--text-on-brand)" aria-hidden="true" />
+          )}
         </button>
       </div>
     </form>
