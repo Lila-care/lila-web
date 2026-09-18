@@ -9,6 +9,7 @@ import Login from "./Admin/Login";
 import ChangePassword from "./Admin/ChangePassword";
 import AuthCallback from "./Admin/AuthCallback";
 import FormsPage from "./Admin/FormsPage";
+import DiscountsPage from "./Admin/DiscountsPage";
 import ChatPage from "./Chat/ChatPage";
 import UserLogin from "./UserLogin";
 import ProtectedRoute from "./auth/ProtectedRoute";
@@ -55,6 +56,14 @@ const App = () => {
           component={() => (
             <ProtectedRoute>
               <FormsPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/admin/discounts"
+          component={() => (
+            <ProtectedRoute>
+              <DiscountsPage />
             </ProtectedRoute>
           )}
         />
