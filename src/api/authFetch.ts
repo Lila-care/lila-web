@@ -85,15 +85,42 @@ function withAuthHeader(
   };
 }
 
+// Small buffer so a token that's about to expire in the next few seconds (network latency,
+// clock skew) still gets refreshed proactively instead of racing the expiry.
+const EXPIRY_BUFFER_MS = 5_000;
+
+function isTokenExpired(): boolean {
+  const expiresAt = localStorage.getItem(EXPIRES_AT_KEY);
+  if (!expiresAt) return false;
+  return Date.now() >= Number(expiresAt) - EXPIRY_BUFFER_MS;
+}
+
 // Drop-in replacement for `fetch` on authenticated endpoints: attaches the current idToken,
 // and on a 401 tries exactly one refresh + retry before giving up. If the refresh itself
 // fails (refresh token invalid/expired/revoked), forces a full logout + redirect to the
 // admin login screen and returns the original 401 response so the caller's existing
 // `handleResponse`/error handling still runs and surfaces an error as before.
+//
+// Reactive 401-retry alone isn't enough: `/lila/chat` and `/lila/agent/me` are `@Public()` on
+// the backend (they also serve guests), so when the idToken has simply expired mid-session the
+// guard doesn't reject with 401 — it silently treats the request as a guest, and since we never
+// send `x-guest-id` on the authenticated branch, the backend 404s with "No user or guest
+// identifier provided" instead. That status never triggers the retry-after-refresh path below,
+// so the expired token would otherwise keep being sent forever (until some *other*, non-public
+// call happened to 401 and refresh it first). We already track the token's expiry ourselves
+// (`EXPIRES_AT_KEY`, set on login and on every refresh) — check it before the first attempt so
+// expiry is caught regardless of which status code a given endpoint happens to answer with.
 export async function authFetch(
   input: string,
   init?: RequestInit,
 ): Promise<Response> {
+  if (isTokenExpired()) {
+    const refreshed = await refreshTokens();
+    if (!refreshed) {
+      forceLogoutRedirect();
+    }
+  }
+
   const idToken = localStorage.getItem(TOKEN_KEY);
   const firstAttempt = await fetch(
     input,

@@ -1,8 +1,20 @@
+import { useLocation } from 'wouter'
+
 interface UpgradeGateModalProps {
   onClose: () => void
 }
 
 export default function UpgradeGateModal({ onClose }: UpgradeGateModalProps) {
+  const [, navigate] = useLocation()
+
+  // There is no dedicated upgrade/checkout route on this branch yet (KAN-62's checkout flow
+  // lives on a separate, unmerged branch) — send the user to their profile, the closest existing
+  // place to manage their plan, instead of leaving the CTA a no-op. Revisit once checkout ships.
+  const handleUpgrade = () => {
+    onClose()
+    navigate('/perfil')
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
@@ -37,7 +49,7 @@ export default function UpgradeGateModal({ onClose }: UpgradeGateModalProps) {
 
         {/* Primary CTA */}
         <button
-          onClick={onClose}
+          onClick={handleUpgrade}
           className="w-full py-3 rounded-xl text-sm font-semibold transition-colors duration-[180ms]"
           style={{
             background: '#7e3565',
