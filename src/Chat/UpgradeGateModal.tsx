@@ -1,9 +1,17 @@
+import { useLocation } from 'wouter'
+
 interface UpgradeGateModalProps {
-  upgradePromptLimit: number
   onClose: () => void
 }
 
-export default function UpgradeGateModal({ upgradePromptLimit: _upgradePromptLimit, onClose }: UpgradeGateModalProps) {
+export default function UpgradeGateModal({ onClose }: UpgradeGateModalProps) {
+  const [, navigate] = useLocation()
+
+  const handleUpgrade = () => {
+    onClose()
+    navigate('/checkout')
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
@@ -38,7 +46,7 @@ export default function UpgradeGateModal({ upgradePromptLimit: _upgradePromptLim
 
         {/* Primary CTA */}
         <button
-          onClick={onClose}
+          onClick={handleUpgrade}
           className="w-full py-3 rounded-xl text-sm font-semibold transition-colors duration-[180ms]"
           style={{
             background: '#7e3565',

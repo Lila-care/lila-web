@@ -66,3 +66,27 @@ button:focus-visible {
 
 /* Tokens (@theme inline / .dark / @layer base) now come from
    @lila-care/design-system/tokens.css, imported above. */
+
+/* KAN-62 — semantic feedback colors for form/status UI (checkout). Not part of
+   @lila-care/design-system tokens yet; declared here under their final names so the screen code
+   can migrate to the package later without changes. Values reuse the existing palette
+   (error = --phase-menstruation-text, success = --phase-follicular-text, warning = Banner warning
+   text) but are NOT aliased to the --phase-* tokens, which carry clinical cycle-phase semantics. */
+:root {
+  --feedback-error-text: #8b3a52;
+  --feedback-error-border: var(--feedback-error-text);
+  --feedback-success-text: #5f7231;
+  --feedback-success-border: var(--feedback-success-text);
+  --feedback-warning-text: #633806;
+  --feedback-warning-border: var(--feedback-warning-text);
+}
+
+@theme inline {
+  --color-feedback-error-text: var(--feedback-error-text);
+  --color-feedback-error-border: var(--feedback-error-border);
+  --color-feedback-success-text: var(--feedback-success-text);
+  --color-feedback-success-border: var(--feedback-success-border);
+  --color-feedback-warning-text: var(--feedback-warning-text);
+  --color-feedback-warning-border: var(--feedback-warning-border);
+  --font-poppins: "Poppins", system-ui, sans-serif;
+}

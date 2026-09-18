@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/auth/AuthContext";
 import { migrateGuest } from "@/api/lila";
 import { readExistingGuestId, clearGuestId } from "@/lib/guest";
+import { consumePostLoginRedirect } from "@/auth/postLoginRedirect";
 
 function AuthCallback() {
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +22,9 @@ function AuthCallback() {
   // immediately so a repeated flow never sees stale state; defaults to /login, the public
   // flow, rather than /admin.
   const loginOriginRef = useRef("/login");
+  // Where a guest was headed before login (e.g. /checkout); null = the default /chat. Only ever
+  // set for the public /login flow (see the effect below).
+  const postLoginRedirectRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (hasRunRef.current) return;
@@ -29,6 +33,11 @@ function AuthCallback() {
     loginOriginRef.current =
       sessionStorage.getItem("lila_login_origin") ?? "/login";
     sessionStorage.removeItem("lila_login_origin");
+    // Always consumed (cleared) so it can't outlive this login, but only honored for the public
+    // /login flow: an admin login must never land on /checkout.
+    const savedRedirect = consumePostLoginRedirect();
+    postLoginRedirectRef.current =
+      loginOriginRef.current === "/login" ? savedRedirect : null;
 
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
@@ -117,7 +126,7 @@ function AuthCallback() {
               clearGuestId();
             }
           }
-          navigate("/chat");
+          navigate(postLoginRedirectRef.current ?? "/chat");
         },
       )
       .catch((err: Error) => {
