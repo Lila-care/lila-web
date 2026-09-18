@@ -18,6 +18,7 @@ import CalendarioPage from "./Calendario";
 import AprendePage from "./Aprende";
 import PerfilPage from "./Perfil";
 import PrivacidadPage from "./Perfil/Privacidad";
+import CheckoutPage from "./Checkout";
 
 const App = () => {
   return (
@@ -67,6 +68,8 @@ const App = () => {
         <Route path="/perfil/privacidad" component={PrivacidadPage} />
         <Route path="/perfil" component={PerfilPage} />
         <Route path="/login" component={UserLogin} />
+        {/* Not under ProtectedRoute (it redirects to /admin): the page gates the session itself. */}
+        <Route path="/checkout" component={CheckoutPage} />
       </Switch>
     </AuthProvider>
   );
