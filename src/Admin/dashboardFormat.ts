@@ -22,6 +22,19 @@ export function formatDateLong(dateStr: string): string {
   });
 }
 
+// COP has no minor unit in everyday display (Wompi, the only payment gateway integrated,
+// settles in Colombian pesos — see CLAUDE.md env section) — `maximumFractionDigits: 0` avoids
+// a stray ",00" on every value.
+const CURRENCY_FORMATTER = new Intl.NumberFormat("es-CO", {
+  style: "currency",
+  currency: "COP",
+  maximumFractionDigits: 0,
+});
+
+export function formatCurrency(cents: number): string {
+  return CURRENCY_FORMATTER.format(cents / 100);
+}
+
 // Coarse trend description for chart `aria-label`s — compares the average of the second
 // half of the range against the first half. Deliberately not a precise statistic (the BE
 // contract has no previous-period comparison field, see DashboardPage report) — just enough

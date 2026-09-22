@@ -56,6 +56,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <a href="/admin/forms" className="hover:text-accent text-white">
             Forms
           </a>
+          <a href="/admin/plans" className="hover:text-accent text-white">
+            Planes
+          </a>
         </nav>
 
         {/* Icons Right */}
