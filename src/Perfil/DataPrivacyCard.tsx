@@ -55,7 +55,7 @@ function DataPrivacyCard() {
           disabled
           title="Próximamente"
           data-testid="delete-all-button"
-          className="flex items-center gap-1.5 bg-transparent text-[13px] font-semibold cursor-not-allowed opacity-60"
+          className="flex items-center gap-1.5 bg-transparent px-4.5 py-2.5 rounded-xl text-[13px] font-semibold cursor-not-allowed opacity-60"
           style={{ color: "#8B3A52" }}
         >
           Borrar todo
