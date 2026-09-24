@@ -59,22 +59,36 @@ No React Query/SWR — data fetching is done via hooks that hold their own `useS
 ### Admin dashboard (`src/Admin/`)
 - `DashboardPage.tsx` — composes the stats view; `useDashboardStats.ts` fetches
   `GET /admin/dashboard/stats` for a selectable day range (`RangeSelector.tsx`).
-- KAN-47 replaced the original hand-rolled section components (`NewUsersHeroCard.tsx`,
-  `RetentionCard.tsx`, `EngagementSection.tsx`, `TrendSection.tsx` — all deleted) with a single
-  KPI row built on `KPICard` from `@lila-care/design-system`. KAN-49/51/53 added 3 more
-  sections below that row (`RevenueSection.tsx`, `TierSection.tsx`,
-  `RecentUsersSection.tsx`), on `CategoryBreakdown` and `DataTable` (`variant="admin"`,
-  `RecentUsersSection.tsx` is the first real consumer of `DataTable` in this repo) from the
-  same package. `UsersTable.tsx`/`FormsTable.tsx` still build their own table manually with
-  `@tanstack/react-table` — new tables should use `DataTable` instead, that manual pattern is
-  not meant to be extended further.
+- Dashboard v2 "Ledger" (Figma `fAVj1toZn8nIMNc2GBblKY`, page `304:9`) replaced the KPICard/
+  CategoryBreakdown/DataTable cards with flat ledger rows: no shadows, gradients or nested cards,
+  and the MRR figure is the only strong element. Sections: `RevenueSection.tsx` (MRR + status/plan
+  breakdowns), `ActivitySection.tsx` (5 KPI rows with sparklines; stacked layout below `xl`),
+  `TierSection.tsx`, `RecentUsersSection.tsx` (`GET /admin/dashboard/users/recent`, fetched once,
+  no polling — each call scans full tables in ms-lila). Ledger primitives are LOCAL in
+  `src/Admin/ledger/` (SectionTitle, KpiLedgerRow, BreakdownLedgerRow, LedgerBar, Sparkline on
+  recharts, StatusMarker, RecentUsersLedger, skeleton/error/missing-value) — candidates to promote
+  to `@lila-care/design-system` later.
+- `src/Admin/ledger/ledger-tokens.css` holds tokens NOT yet approved (`--teal-700`, `--teal-500`,
+  `--radius-xs`, `--radius-ledger-sm`, `--border-strong`, `type-*` text utilities), all marked
+  `PENDING design-token-sync approval`. Move them to the package's `tokens.css` once approved.
+  Text utilities use the `type-` prefix on purpose: `cn()`/tailwind-merge treats unknown `text-*`
+  classes as colors and drops them.
+- Package gotcha: `rounded-sm/md/lg/xl` render square because the package's `tokens.css` builds
+  them as `calc()` over a `--radius` nobody defines. Use an explicit radius variable.
+- `AdminLayout.tsx` + `AdminNavItem.tsx` — shared shell for every admin page: 220px sidebar
+  (`lg+`), 80px rail with labels (`md`), fixed bottom tab bar + "Cerrar sesión" link at the end
+  of the content (below `md`). Active item = semibold label + 2px teal mark, never a filled box.
+  `index.css` has an unlayered `a:hover { color }`, so nav colors go on the inner icon/label, not
+  on the link.
+- `UsersTable.tsx`/`FormsTable.tsx` still build their own table manually with
+  `@tanstack/react-table`.
 - `UsersPage.tsx`/`UsersTable.tsx`/`UserDetails.tsx` — paginated users list + detail. Tables use
   raw `Table`/`TableHeader`/`TableBody`/... primitives wired manually with
   `@tanstack/react-table` (`useReactTable`, `ColumnDef[]`) — the same pattern repeats in
   `FormsTable.tsx`. There is no shared generic `<DataTable>` wrapper component in this repo yet.
 - `FormsPage.tsx`/`FormEditor.tsx`/`FormQuestionBuilder.tsx` — onboarding form builder/editor.
-- `dashboardFormat.ts` — pure formatting helpers (`formatDateShort`, `formatDateLong`,
-  `describeTrend`). No date library dependency (`date-fns`/`dayjs`/etc.) — everything goes
+- `dashboardFormat.ts` — pure formatting helpers (`formatDateLong`, `formatCurrency`, `formatCount`,
+  `formatPercent`, `findPeak`/`describePeak`, `formatRelativeDate`, `describeTrend`). No date library dependency (`date-fns`/`dayjs`/etc.) — everything goes
   through native `Intl`/`Date`. Follow this convention for any new formatter instead of adding
   a dependency.
 - `Login.tsx`/`ChangePassword.tsx`/`AuthCallback.tsx`/`AdminLayout.tsx` — admin auth shell.
