@@ -31,6 +31,17 @@ async function seedAuthToken(page: Page) {
   );
 }
 
+// KAN-43: `RecentUsersSection` fetches this endpoint unconditionally whenever the dashboard
+// renders its success state — tests in this file that only care about the KPI row/nav still
+// need it mocked, otherwise the unmocked request hits the real `VITE_API_URL`, gets a 401,
+// and `authFetch` force-logs-out the fake token (redirect to `/admin`), failing unrelated
+// assertions below. Covered for real (data/empty/error) in `admin-dashboard-kan43.spec.ts`.
+async function mockRecentUsersEmpty(page: Page) {
+  await page.route(`${API_URL}/admin/dashboard/users/recent*`, (route) =>
+    fulfillJson(route, []),
+  );
+}
+
 function byDay(counts: number[], startDay = 1) {
   return counts.map((count, i) => ({
     date: `2026-08-${String(startDay + i).padStart(2, "0")}`,
@@ -49,6 +60,17 @@ function buildStats(
     cycleReports: { total: 18, byDay: byDay([6, 6, 6]) },
     conversations: { total: 30, byDay: byDay([10, 8, 12]) },
     retention: { newUsersInRange: 12, returned: 6, rate: 0.5 },
+    // KAN-43: `DashboardStatsDto` now requires these two fields — the sections that read
+    // them (`RevenueSection`/`TierSection`) are covered by
+    // `e2e/admin-dashboard-kan43.spec.ts`, so this fixture just needs valid shapes to avoid
+    // crashing the page for tests in *this* file that don't care about revenue/tier.
+    subscriptions: {
+      totalSubscribers: 0,
+      byStatus: { active: 0, past_due: 0, canceled: 0 },
+      byPlan: [],
+      mrrInCents: 0,
+    },
+    profileTiers: { bienestar: 0, clinico: 0 },
     ...overrides,
   };
 }
@@ -69,6 +91,7 @@ test.describe("Admin Dashboard — stats", () => {
     await page.route(`${API_URL}/admin/dashboard/stats*`, (route) =>
       fulfillJson(route, buildStats(30)),
     );
+    await mockRecentUsersEmpty(page);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
@@ -88,11 +111,62 @@ test.describe("Admin Dashboard — stats", () => {
     await page.route(`${API_URL}/admin/dashboard/stats*`, (route) =>
       fulfillJson(route, EMPTY_STATS),
     );
+    await mockRecentUsersEmpty(page);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
+    // `EMPTY_STATS` también trae `subscriptions`/`profileTiers` en cero (heredado de
+    // `buildStats()`), así que este es el caso realmente vacío: ni el KPI row de rango ni las
+    // 3 secciones KAN-43 tienen nada que mostrar (cada una renderiza su propio mensaje "sin
+    // datos" en vez de desaparecer — ver test siguiente para el caso donde sí hay datos
+    // globales pese al rango vacío).
     await expect(page.getByTestId("dashboard-empty")).toBeVisible();
     await expect(page.getByTestId("dashboard-content")).toHaveCount(0);
+    await expect(page.getByTestId("revenue-section")).toBeVisible();
+    await expect(page.getByTestId("tier-section")).toBeVisible();
+    await expect(page.getByTestId("recent-users-section")).toBeVisible();
+  });
+
+  test("KPIs de rango en 0 pero subscriptions/profileTiers con datos — las 3 secciones nuevas se renderizan igual", async ({
+    page,
+  }) => {
+    await seedAuthToken(page);
+    await page.route(`${API_URL}/admin/dashboard/stats*`, (route) =>
+      fulfillJson(
+        route,
+        buildStats(30, {
+          newUsers: { total: 0, byDay: byDay([0, 0, 0]) },
+          activeUsers: { total: 0 },
+          cycleReports: { total: 0, byDay: byDay([0, 0, 0]) },
+          conversations: { total: 0, byDay: byDay([0, 0, 0]) },
+          retention: { newUsersInRange: 0, returned: 0, rate: 0 },
+          subscriptions: {
+            totalSubscribers: 84,
+            byStatus: { active: 70, past_due: 9, canceled: 5 },
+            byPlan: [
+              { planId: "plan-monthly", planName: "Mensual", count: 84 },
+            ],
+            mrrInCents: 4_200_000,
+          },
+          profileTiers: { bienestar: 61, clinico: 23 },
+        }),
+      ),
+    );
+    await mockRecentUsersEmpty(page);
+
+    await page.goto(`${BASE_URL}/admin/dashboard`);
+
+    // Sin actividad de rango → sigue mostrando el mensaje de KPIs vacíos, no el grid de KPIs.
+    await expect(page.getByTestId("dashboard-empty")).toBeVisible();
+    await expect(page.getByTestId("dashboard-content")).toHaveCount(0);
+
+    // Pero los ingresos y la segmentación por tier son datos globales reales — no deben
+    // esconderse solo porque el rango seleccionado no tuvo altas/conversaciones.
+    await expect(page.getByTestId("revenue-section")).toBeVisible();
+    await expect(page.getByTestId("revenue-section")).toContainText("84");
+    await expect(page.getByTestId("tier-section")).toBeVisible();
+    await expect(page.getByTestId("tier-section")).toContainText("61");
+    await expect(page.getByTestId("recent-users-section")).toBeVisible();
   });
 
   test("estado de error — muestra mensaje y reintentar recupera los datos", async ({
@@ -106,6 +180,7 @@ test.describe("Admin Dashboard — stats", () => {
       }
       return fulfillJson(route, buildStats(30));
     });
+    await mockRecentUsersEmpty(page);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
     await expect(page.getByTestId("dashboard-error")).toBeVisible();
@@ -131,6 +206,7 @@ test.describe("Admin Dashboard — stats", () => {
         }),
       );
     });
+    await mockRecentUsersEmpty(page);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
     await expect(page.getByTestId("kpi-card-new-users")).toContainText("30");
@@ -177,6 +253,7 @@ test.describe("Admin Dashboard — nav sin links muertos", () => {
     await page.route(`${API_URL}/lila/plans`, (route) =>
       fulfillJson(route, []),
     );
+    await mockRecentUsersEmpty(page);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
     await expect(page.getByTestId("dashboard-page")).toBeVisible();

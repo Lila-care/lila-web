@@ -12,6 +12,9 @@ import {
 import AdminLayout from "@/Admin/AdminLayout";
 import { useDashboardStats } from "@/Admin/useDashboardStats";
 import { RangeSelector } from "@/Admin/RangeSelector";
+import RevenueSection from "@/Admin/RevenueSection";
+import TierSection from "@/Admin/TierSection";
+import RecentUsersSection from "@/Admin/RecentUsersSection";
 import { DashboardStatsDto } from "@/api/dashboard";
 import {
   Alert,
@@ -225,6 +228,28 @@ function DashboardPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* KAN-43: ingresos → tier → usuarias recientes, en ese orden (mismo orden que los
+              tickets). `subscriptions`/`profileTiers` son conteos globales que el BE no acota
+              por `days` (a diferencia de newUsers/activeUsers/cycleReports/conversations, que sí
+              alimentan `isFullyEmpty`) — estas 3 secciones dependen solo de que `stats` haya
+              cargado, nunca de `isFullyEmpty`, para no esconder ingresos/segmentación reales
+              solo porque el rango de días elegido no tuvo altas o conversaciones nuevas.
+              RecentUsersSection hace además su propio fetch independiente de `stats`. */}
+          {!isInitialLoading && !error && stats && (
+            <div
+              className={
+                isRefetching
+                  ? "mt-8 flex flex-col gap-8 pointer-events-none opacity-50 transition-opacity"
+                  : "mt-8 flex flex-col gap-8 transition-opacity"
+              }
+              data-testid="dashboard-sections"
+            >
+              <RevenueSection subscriptions={stats.subscriptions} />
+              <TierSection profileTiers={stats.profileTiers} />
+              <RecentUsersSection />
             </div>
           )}
         </div>

@@ -96,7 +96,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 p-0">{children}</main>
+      {/* `min-w-0` — this `<main>` is a flex item of the `flex-col` wrapper above; without it,
+          a flex item's default `min-width: auto` refuses to shrink below its content's
+          min-content width (e.g. a wide table in a child page), pushing the whole layout past
+          the viewport on mobile instead of letting that child scroll internally. */}
+      <main className="min-w-0 flex-1 p-0">{children}</main>
     </div>
   );
 }
