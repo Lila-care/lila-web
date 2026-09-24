@@ -48,7 +48,6 @@ function ChatPage() {
     showUpgradeGate,
     setShowUpgradeGate,
     freeQuestionLimit,
-    upgradePromptLimit,
     hasActiveTemplate,
     isCheckingOnboarding,
     sendMessage,
@@ -122,7 +121,6 @@ function ChatPage() {
       {/* Upgrade gate modal for authenticated users at threshold */}
       {showUpgradeGate && (
         <UpgradeGateModal
-          upgradePromptLimit={upgradePromptLimit}
           onClose={() => setShowUpgradeGate(false)}
         />
       )}

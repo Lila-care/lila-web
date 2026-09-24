@@ -31,15 +31,27 @@ function getInitials(source: string): string {
   return namePart.slice(0, 2).toUpperCase();
 }
 
+// Las fotos de Google llegan con un sufijo de tamaño (=s96-c) que se ve pixelado en
+// pantallas retina — el contenedor es de 48px CSS, o sea 96px físicos en 2x y 144px en 3x.
+// Subimos el pedido a s256 sin tocar el resto de la URL ni otros orígenes de imagen.
+function upscaleGooglePhoto(url: string): string {
+  if (!url.includes("googleusercontent.com")) return url;
+  return url.replace(/=s\d+(-c)?$/, "=s256$1");
+}
+
 function Sidebar() {
   const [location, navigate] = useLocation();
   const { token, email, name, picture, logout } = useAuth();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  // Google a veces devuelve 403 en la foto (hotlinking); sin esto el <img> roto se
+  // quedaba en pantalla en vez de caer a las iniciales.
+  const [pictureFailed, setPictureFailed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const firstItemRef = useRef<HTMLAnchorElement>(null);
   const popoverId = useId();
   const isAuthenticated = !!token;
+  const showPicture = isAuthenticated && !!picture && !pictureFailed;
 
   useEffect(() => {
     if (!isPopoverOpen) return;
@@ -116,15 +128,26 @@ function Sidebar() {
               key={item.label}
               href={item.href}
               data-testid={`nav-item-${item.label.toLowerCase()}`}
-              className="flex flex-col items-center justify-center rounded-[14px] size-[48px] transition-colors"
-              style={{
-                background: isActive
-                  ? "var(--brand-primary)"
-                  : "var(--nav-icon-default)",
-              }}
+              className={
+                "flex flex-col items-center justify-center rounded-[14px] size-[48px] " +
+                "transition-colors outline-none focus-visible:ring-2 " +
+                "focus-visible:ring-[var(--brand-accent)] focus-visible:ring-offset-2 " +
+                "focus-visible:ring-offset-[var(--nav-background)] " +
+                (isActive
+                  ? "bg-[var(--brand-primary)]"
+                  : "bg-[var(--nav-icon-default)] hover:bg-[var(--nav-icon-hover)]")
+              }
               aria-current={isActive ? "page" : undefined}
             >
-              <Icon size={20} color="var(--text-on-brand)" />
+              {/* El inactivo va sobre verde folicular claro: ícono blanco daría 1.93:1.
+                  Con --nav-icon-fg (#4a1f3a) sube a 7.03:1. El activo sigue sobre
+                  ciruela, donde el blanco da 8.6:1. */}
+              <Icon
+                size={20}
+                color={
+                  isActive ? "var(--text-on-brand)" : "var(--nav-icon-fg)"
+                }
+              />
             </Link>
           );
         })}
@@ -140,31 +163,40 @@ function Sidebar() {
         aria-haspopup={isAuthenticated ? "menu" : undefined}
         aria-expanded={isAuthenticated ? isPopoverOpen : undefined}
         aria-controls={isPopoverOpen ? popoverId : undefined}
-        className="flex flex-col items-center justify-center rounded-full size-[48px] border-2 border-solid overflow-hidden"
+        className={
+          "flex flex-col items-center justify-center rounded-full size-[48px] aspect-square " +
+          "border-2 border-solid overflow-hidden p-0 outline-none " +
+          "focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)] " +
+          "focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--nav-background)]"
+        }
         style={{
           borderColor: isAuthenticated
             ? "var(--brand-accent)"
             : "var(--nav-icon-default)",
-          background: "var(--nav-icon-default)",
+          // Sin fondo cuando la foto carga: el contenedor queda tapado por la imagen y
+          // cualquier color acá sólo puede asomar por los bordes.
+          background: showPicture ? "transparent" : "var(--nav-icon-default)",
         }}
       >
-        {isAuthenticated && picture ? (
+        {showPicture ? (
           <img
-            src={picture}
-            alt={name ?? email ?? "Avatar"}
+            src={upscaleGooglePhoto(picture!)}
+            alt={name ?? email ?? "Foto de perfil"}
             data-testid="account-avatar"
-            className="size-full object-cover"
+            referrerPolicy="no-referrer"
+            onError={() => setPictureFailed(true)}
+            className="size-full object-cover object-center"
           />
         ) : isAuthenticated ? (
           <span
             data-testid="account-avatar-initials"
             className="text-xs font-semibold"
-            style={{ color: "var(--text-on-brand)" }}
+            style={{ color: "var(--nav-icon-fg)" }}
           >
             {initialsSource ? getInitials(initialsSource) : "?"}
           </span>
         ) : (
-          <UserRound size={20} color="var(--text-on-brand)" />
+          <UserRound size={20} color="var(--nav-icon-fg)" />
         )}
       </button>
 
