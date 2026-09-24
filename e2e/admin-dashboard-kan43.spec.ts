@@ -101,8 +101,8 @@ async function mockRecentUsers(
   });
 }
 
-test.describe("Admin Dashboard — KAN-43 (ingresos, tier, usuarias recientes)", () => {
-  test("RevenueSection — MRR formateado como COP y 2 CategoryBreakdown con datos reales", async ({
+test.describe("Admin Dashboard — ingresos, tier y usuarias recientes (Ledger v2)", () => {
+  test("Ingresos — MRR en COP como figura principal + ledgers por estado y por plan", async ({
     page,
   }) => {
     await seedAuthToken(page);
@@ -111,25 +111,39 @@ test.describe("Admin Dashboard — KAN-43 (ingresos, tier, usuarias recientes)",
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
-    await expect(page.getByTestId("revenue-section")).toBeVisible();
-    await expect(page.getByTestId("kpi-card-mrr")).toContainText("$");
-    await expect(page.getByTestId("kpi-card-mrr")).toContainText("42.000");
+    await expect(page.getByTestId("mrr-value")).toHaveText(/\$\s42\.000/);
+    await expect(page.getByTestId("mrr-block")).toContainText("84 suscriptoras");
 
-    await expect(page.getByTestId("category-breakdown-status")).toContainText(
-      "Activas",
-    );
-    await expect(page.getByTestId("category-breakdown-status")).toContainText(
-      "70",
-    );
-    await expect(page.getByTestId("category-breakdown-plan")).toContainText(
+    const active = page.getByTestId("breakdown-status-active");
+    await expect(active).toContainText("Activas");
+    await expect(active).toContainText("70");
+    await expect(active).toContainText(/83\s%/);
+    // Los estados se distinguen por forma del marcador, no por color.
+    await expect(active.getByTestId("status-marker-filled")).toBeVisible();
+    await expect(
+      page
+        .getByTestId("breakdown-status-past_due")
+        .getByTestId("status-marker-half"),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByTestId("breakdown-status-canceled")
+        .getByTestId("status-marker-ring"),
+    ).toBeVisible();
+
+    await expect(page.getByTestId("breakdown-plan-plan-monthly")).toContainText(
       "Mensual",
     );
-    await expect(page.getByTestId("category-breakdown-plan")).toContainText(
+    await expect(page.getByTestId("breakdown-plan-plan-annual")).toContainText(
       "Anual",
     );
+    // "Por plan" no lleva marcador.
+    await expect(
+      page.getByTestId("breakdown-plan").locator("[data-testid^=status-marker]"),
+    ).toHaveCount(0);
   });
 
-  test("RevenueSection — sin suscriptores muestra mensaje en vez de barras vacías", async ({
+  test("Ingresos — sin suscriptoras muestra mensaje en vez de filas vacías", async ({
     page,
   }) => {
     await seedAuthToken(page);
@@ -145,12 +159,13 @@ test.describe("Admin Dashboard — KAN-43 (ingresos, tier, usuarias recientes)",
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
-    await expect(page.getByTestId("category-breakdown-status")).toContainText(
+    await expect(page.getByTestId("breakdown-status")).toContainText(
       "Todavía no hay suscripciones",
     );
+    await expect(page.getByTestId("mrr-value")).toHaveText(/\$\s0/);
   });
 
-  test("TierSection — barra apilada con conteos reales del BE", async ({
+  test("Perfiles por tier — conteos + barra, sin porcentaje, con nota de solapamiento", async ({
     page,
   }) => {
     await seedAuthToken(page);
@@ -159,41 +174,72 @@ test.describe("Admin Dashboard — KAN-43 (ingresos, tier, usuarias recientes)",
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
-    await expect(page.getByTestId("category-breakdown-tier")).toContainText(
-      "Bienestar",
-    );
-    await expect(page.getByTestId("category-breakdown-tier")).toContainText(
-      "61",
-    );
-    await expect(page.getByTestId("category-breakdown-tier")).toContainText(
-      "Clínico",
-    );
-    await expect(page.getByTestId("category-breakdown-tier")).toContainText(
+    const bienestar = page.getByTestId("breakdown-tier-bienestar");
+    await expect(bienestar).toContainText("Bienestar");
+    await expect(bienestar).toContainText("61");
+    await expect(bienestar).not.toContainText("%");
+    await expect(bienestar.getByTestId("ledger-bar")).toBeVisible();
+    await expect(page.getByTestId("breakdown-tier-clinico")).toContainText(
       "23",
+    );
+    await expect(page.getByTestId("tier-section")).toContainText(
+      "Un perfil puede estar en ambos.",
     );
   });
 
-  test("RecentUsersSection — tabla con 4 columnas y fecha relativa", async ({
+  test("Usuarias recientes — ledger con fecha relativa y 'Sin email' si falta", async ({
     page,
   }) => {
     await seedAuthToken(page);
     await mockStats(page);
     await mockRecentUsers(page, [
       recentUser({ userId: "user-1", email: "reciente@example.com" }),
+      recentUser({
+        userId: "user-2",
+        email: undefined,
+        lastActivityAt: new Date(
+          Date.now() - 30 * 60 * 60 * 1000,
+        ).toISOString(),
+      }),
     ]);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
-    await expect(page.getByTestId("recent-users-section")).toBeVisible();
-    await expect(page.getByTestId("recent-users-section")).toContainText(
-      "reciente@example.com",
-    );
-    await expect(page.getByTestId("recent-users-section")).toContainText(
-      "hace 2 h",
-    );
+    const rows = page.getByTestId("recent-user-row");
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toContainText("reciente@example.com");
+    await expect(rows.nth(0)).toContainText("hace 2 h");
+    await expect(rows.nth(1)).toContainText("Sin email");
+    await expect(rows.nth(1)).toContainText("ayer");
   });
 
-  test("RecentUsersSection — estado vacío con mensaje explícito si no hay usuarias recientes", async ({
+  test("Usuarias recientes — máximo 10 filas y ordenar por conversaciones", async ({
+    page,
+  }) => {
+    await seedAuthToken(page);
+    await mockStats(page);
+    await mockRecentUsers(
+      page,
+      Array.from({ length: 12 }, (_, i) =>
+        recentUser({
+          userId: `user-${i}`,
+          email: `u${i}@example.com`,
+          conversations: i,
+        }),
+      ),
+    );
+
+    await page.goto(`${BASE_URL}/admin/dashboard`);
+
+    const rows = page.getByTestId("recent-user-row");
+    await expect(rows).toHaveCount(10);
+    await expect(rows.first()).toContainText("u0@example.com");
+
+    await page.getByTestId("recent-users-sort-conversations").click();
+    await expect(rows.first()).toContainText("u9@example.com");
+  });
+
+  test("Usuarias recientes — estado vacío con mensaje explícito", async ({
     page,
   }) => {
     await seedAuthToken(page);
@@ -202,13 +248,12 @@ test.describe("Admin Dashboard — KAN-43 (ingresos, tier, usuarias recientes)",
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
-    await expect(page.getByTestId("recent-users-empty")).toBeVisible();
-    await expect(page.getByTestId("recent-users-empty")).toContainText(
+    await expect(page.getByTestId("recent-users-empty")).toHaveText(
       "Todavía no hay usuarias con actividad reciente.",
     );
   });
 
-  test("RecentUsersSection — estado de error con reintentar", async ({
+  test("Usuarias recientes — estado de error con reintentar", async ({
     page,
   }) => {
     await seedAuthToken(page);
@@ -228,9 +273,7 @@ test.describe("Admin Dashboard — KAN-43 (ingresos, tier, usuarias recientes)",
     shouldFail = false;
     await page
       .getByTestId("recent-users-error")
-      .getByRole("button", {
-        name: "Reintentar",
-      })
+      .getByRole("button", { name: "Reintentar" })
       .click();
 
     await expect(page.getByTestId("recent-users-error")).toHaveCount(0);
@@ -239,38 +282,42 @@ test.describe("Admin Dashboard — KAN-43 (ingresos, tier, usuarias recientes)",
     );
   });
 
-  test("viewport 375px — sin overflow horizontal en las 3 secciones nuevas", async ({
+  test("viewport 375px — lista apilada sin ordenamiento, KPI rows apiladas, sin overflow", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 375, height: 800 });
+    await page.setViewportSize({ width: 375, height: 812 });
     await seedAuthToken(page);
     await mockStats(page);
-    // Email largo a propósito — con 4 columnas es la celda con más chance de forzar overflow
-    // si `RecentUsersSection` alguna vez pierde el wrapper `overflow-x-auto`.
+    // Email largo a propósito — es la celda con más chance de forzar overflow.
     await mockRecentUsers(page, [
       recentUser({ email: "usuaria-con-un-email-bastante-largo@example.com" }),
     ]);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
-    await expect(page.getByTestId("recent-users-section")).toBeVisible();
+    await expect(page.getByTestId("recent-user-row")).toHaveCount(1);
 
-    // Scoped to the 3 new sections, not `document.documentElement.scrollWidth` — the
-    // `AdminLayout` top navbar (`Dashboard/Users/Reports/Forms` links, not touched by this
-    // ticket) already overflows horizontally at 375px on *every* admin page today, including
-    // ones this feature never touches (`/admin/users`, no new sections at all, scrollWidth
-    // ~585px). That's a pre-existing, unrelated bug — flagged as a follow-up instead of fixed
-    // here, since fixing the shared navbar's responsive behavior is out of scope for KAN-49/
-    // 51/53 and risks a much bigger diff than this ticket's contract.
-    for (const testId of [
-      "revenue-section",
-      "tier-section",
-      "recent-users-section",
-    ]) {
-      const box = await page.getByTestId(testId).boundingBox();
-      expect(box).not.toBeNull();
-      if (box) {
-        expect(box.x + box.width).toBeLessThanOrEqual(375 + 1);
-      }
+    // Sin controles de orden ni header de columnas a 375.
+    await expect(
+      page.getByTestId("recent-users-sort-conversations"),
+    ).toBeHidden();
+    await expect(page.getByTestId("recent-user-row")).toContainText(
+      "5 conversaciones",
+    );
+
+    // KPI row apilada: el detalle queda debajo del label, no en la misma línea.
+    const row = page.getByTestId("kpi-row-new-users");
+    const label = row.getByText("Nuevas usuarias");
+    const detail = row.getByText(/Pico:/);
+    const labelBox = await label.boundingBox();
+    const detailBox = await detail.boundingBox();
+    expect(labelBox && detailBox).toBeTruthy();
+    if (labelBox && detailBox) {
+      expect(detailBox.y).toBeGreaterThan(labelBox.y);
     }
+
+    const scrollWidth = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    expect(scrollWidth).toBeLessThanOrEqual(375);
   });
 });

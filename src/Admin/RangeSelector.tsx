@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react";
 import { DashboardRangeDays } from "@/api/dashboard";
 import {
   Select,
@@ -20,7 +19,7 @@ interface RangeSelectorProps {
   // Only true during the very first load — the select stays interactive during a refetch so
   // the user can change the range again before the previous request resolves.
   disabled?: boolean;
-  // Shows a small inline spinner next to the trigger while a refetch is in flight.
+  // Refetch in flight. Shown as a text caption, never by dimming the content (Ledger spec).
   loading?: boolean;
 }
 
@@ -31,30 +30,39 @@ export function RangeSelector({
   loading,
 }: RangeSelectorProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
+      {loading && (
+        <span
+          className="type-caption text-text-secondary"
+          data-testid="range-selector-loading"
+        >
+          Actualizando…
+        </span>
+      )}
       <Select
         value={String(value)}
         onValueChange={(v) => onChange(Number(v) as DashboardRangeDays)}
         disabled={disabled}
       >
-        <SelectTrigger className="w-32" data-testid="range-selector">
+        <SelectTrigger
+          size="sm"
+          className="type-body-md w-32 rounded-lg border-border-strong bg-surface-default text-text-primary shadow-none"
+          data-testid="range-selector"
+        >
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="rounded-lg border-border-default bg-surface-default shadow-none">
           {RANGE_OPTIONS.map((opt) => (
-            <SelectItem key={opt.value} value={String(opt.value)}>
+            <SelectItem
+              key={opt.value}
+              value={String(opt.value)}
+              className="type-body-md text-text-primary focus:bg-surface-muted focus:text-text-primary"
+            >
               {opt.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      {loading && (
-        <Loader2
-          className="size-3.5 animate-spin text-neutral-400"
-          aria-hidden="true"
-          data-testid="range-selector-loading"
-        />
-      )}
     </div>
   );
 }

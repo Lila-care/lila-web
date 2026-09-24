@@ -83,8 +83,8 @@ const EMPTY_STATS = buildStats(30, {
   retention: { newUsersInRange: 0, returned: 0, rate: 0 },
 });
 
-test.describe("Admin Dashboard — stats", () => {
-  test("happy path — muestra la fila de KPIs (nuevas usuarias, activas, retención, conversaciones, reportes de ciclo)", async ({
+test.describe("Admin Dashboard — stats (Ledger v2)", () => {
+  test("happy path — ledger de Actividad con totales, detalle y sparklines", async ({
     page,
   }) => {
     await seedAuthToken(page);
@@ -95,15 +95,42 @@ test.describe("Admin Dashboard — stats", () => {
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
-    await expect(page.getByTestId("kpi-card-new-users")).toContainText("12");
-    await expect(page.getByTestId("kpi-card-active-users")).toContainText("40");
-    await expect(page.getByTestId("kpi-card-retention")).toContainText("50%");
-    await expect(page.getByTestId("kpi-card-conversations")).toContainText(
+    await expect(page.getByTestId("kpi-row-new-users-total")).toHaveText("12");
+    await expect(page.getByTestId("kpi-row-active-users-total")).toHaveText(
+      "40",
+    );
+    await expect(page.getByTestId("kpi-row-retention-total")).toHaveText(
+      /50\s%/,
+    );
+    await expect(page.getByTestId("kpi-row-conversations-total")).toHaveText(
       "30",
     );
-    await expect(page.getByTestId("kpi-card-cycle-reports")).toContainText(
+    await expect(page.getByTestId("kpi-row-cycle-reports-total")).toHaveText(
       "18",
     );
+
+    // Detalle calculado de byDay (pico) y de retention (returned / newUsersInRange).
+    await expect(page.getByTestId("kpi-row-new-users")).toContainText(
+      "Pico: 5 el 2 ago",
+    );
+    await expect(page.getByTestId("kpi-row-retention")).toContainText(
+      "6 de 12 nuevas volvieron",
+    );
+    await expect(page.getByTestId("kpi-row-active-users")).toContainText(
+      "Escribieron o registraron ciclo",
+    );
+
+    // Sparkline solo en las 3 series con byDay; activas/retención muestran "—".
+    await expect(
+      page.getByTestId("activity-section").getByTestId("sparkline"),
+    ).toHaveCount(3);
+    await expect(
+      page.getByTestId("kpi-row-active-users").getByTestId("missing-value"),
+    ).toBeVisible();
+
+    // Sin flechas de comparación: el BE no trae periodo anterior.
+    await expect(page.getByTestId("activity-section")).not.toContainText("▲");
+    await expect(page.getByTestId("activity-section")).not.toContainText("▼");
   });
 
   test("estado vacío — sin actividad en absoluto", async ({ page }) => {
@@ -115,19 +142,22 @@ test.describe("Admin Dashboard — stats", () => {
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
-    // `EMPTY_STATS` también trae `subscriptions`/`profileTiers` en cero (heredado de
-    // `buildStats()`), así que este es el caso realmente vacío: ni el KPI row de rango ni las
-    // 3 secciones KAN-43 tienen nada que mostrar (cada una renderiza su propio mensaje "sin
-    // datos" en vez de desaparecer — ver test siguiente para el caso donde sí hay datos
-    // globales pese al rango vacío).
-    await expect(page.getByTestId("dashboard-empty")).toBeVisible();
-    await expect(page.getByTestId("dashboard-content")).toHaveCount(0);
-    await expect(page.getByTestId("revenue-section")).toBeVisible();
-    await expect(page.getByTestId("tier-section")).toBeVisible();
-    await expect(page.getByTestId("recent-users-section")).toBeVisible();
+    await expect(page.getByTestId("activity-empty")).toBeVisible();
+    await expect(page.getByTestId("kpi-row-new-users")).toContainText(
+      "Sin actividad en el periodo",
+    );
+    // Retención sin cohorte = valor ausente ("—"), nunca un "0 %" engañoso.
+    await expect(
+      page.getByTestId("kpi-row-retention-total").getByTestId("missing-value"),
+    ).toBeVisible();
+    await expect(page.getByTestId("revenue-section")).toContainText(
+      "Todavía no hay suscripciones.",
+    );
+    await expect(page.getByTestId("breakdown-tier-empty")).toBeVisible();
+    await expect(page.getByTestId("recent-users-empty")).toBeVisible();
   });
 
-  test("KPIs de rango en 0 pero subscriptions/profileTiers con datos — las 3 secciones nuevas se renderizan igual", async ({
+  test("actividad en 0 pero subscriptions/profileTiers con datos — ingresos y tier se renderizan igual", async ({
     page,
   }) => {
     await seedAuthToken(page);
@@ -156,20 +186,17 @@ test.describe("Admin Dashboard — stats", () => {
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
-    // Sin actividad de rango → sigue mostrando el mensaje de KPIs vacíos, no el grid de KPIs.
-    await expect(page.getByTestId("dashboard-empty")).toBeVisible();
-    await expect(page.getByTestId("dashboard-content")).toHaveCount(0);
-
-    // Pero los ingresos y la segmentación por tier son datos globales reales — no deben
-    // esconderse solo porque el rango seleccionado no tuvo altas/conversaciones.
-    await expect(page.getByTestId("revenue-section")).toBeVisible();
-    await expect(page.getByTestId("revenue-section")).toContainText("84");
-    await expect(page.getByTestId("tier-section")).toBeVisible();
-    await expect(page.getByTestId("tier-section")).toContainText("61");
-    await expect(page.getByTestId("recent-users-section")).toBeVisible();
+    await expect(page.getByTestId("activity-empty")).toBeVisible();
+    // Ingresos y tier son conteos globales — no se esconden porque el rango no tuvo actividad.
+    await expect(page.getByTestId("revenue-section")).toContainText(
+      "84 suscriptoras",
+    );
+    await expect(page.getByTestId("breakdown-tier-bienestar")).toContainText(
+      "61",
+    );
   });
 
-  test("estado de error — muestra mensaje y reintentar recupera los datos", async ({
+  test("estado de error — mensaje + Reintentar, nav en tono neutral, y reintentar recupera", async ({
     page,
   }) => {
     await seedAuthToken(page);
@@ -184,21 +211,35 @@ test.describe("Admin Dashboard — stats", () => {
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
     await expect(page.getByTestId("dashboard-error")).toBeVisible();
+    await expect(page.getByTestId("dashboard-error")).toContainText(
+      "No pudimos cargar el dashboard.",
+    );
+    await expect(page.getByTestId("nav-active-mark")).toHaveClass(
+      /bg-surface-brand-light/,
+    );
 
     shouldFail = false;
     await page.getByRole("button", { name: "Reintentar" }).click();
 
     await expect(page.getByTestId("dashboard-error")).toHaveCount(0);
-    await expect(page.getByTestId("kpi-card-new-users")).toContainText("12");
+    await expect(page.getByTestId("kpi-row-new-users-total")).toHaveText("12");
+    await expect(page.getByTestId("nav-active-mark")).toHaveClass(
+      /bg-teal-500/,
+    );
   });
 
-  test("cambio de rango — refetch mantiene datos visibles y anuncia el resultado", async ({
+  test("cambio de rango — 'Actualizando…' sin bajar opacidad, datos nuevos y anuncio", async ({
     page,
   }) => {
     await seedAuthToken(page);
-    await page.route(`${API_URL}/admin/dashboard/stats*`, (route) => {
+    let releaseRefetch: () => void = () => {};
+    const refetchGate = new Promise<void>((resolve) => {
+      releaseRefetch = resolve;
+    });
+    await page.route(`${API_URL}/admin/dashboard/stats*`, async (route) => {
       const url = new URL(route.request().url());
       const days = Number(url.searchParams.get("days") ?? "30");
+      if (days === 7) await refetchGate;
       return fulfillJson(
         route,
         buildStats(days, {
@@ -209,63 +250,135 @@ test.describe("Admin Dashboard — stats", () => {
     await mockRecentUsersEmpty(page);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
-    await expect(page.getByTestId("kpi-card-new-users")).toContainText("30");
+    await expect(page.getByTestId("kpi-row-new-users-total")).toHaveText("30");
 
     await page.getByTestId("range-selector").click();
     await page.getByRole("option", { name: "7 días" }).click();
 
-    await expect(page.getByTestId("kpi-card-new-users")).toContainText("7");
+    await expect(page.getByTestId("range-selector-loading")).toHaveText(
+      "Actualizando…",
+    );
+    await expect(page.getByTestId("dashboard-content")).toHaveCSS(
+      "opacity",
+      "1",
+    );
+    await expect(page.getByTestId("kpi-row-new-users-total")).toHaveText("30");
+
+    releaseRefetch();
+
+    await expect(page.getByTestId("kpi-row-new-users-total")).toHaveText("7");
+    await expect(page.getByTestId("range-selector-loading")).toHaveCount(0);
     await expect(page.getByTestId("dashboard-live-region")).toHaveText(
       "Mostrando datos de los últimos 7 días.",
     );
   });
 });
 
-test.describe("Admin Dashboard — nav sin links muertos", () => {
-  test("Dashboard/Users/Reports navegan a rutas válidas", async ({ page }) => {
+async function mockAdminPagesApis(page: Page) {
+  await page.route(`${API_URL}/admin/dashboard/stats*`, (route) =>
+    fulfillJson(route, buildStats(30)),
+  );
+  await page.route(`${API_URL}/admin/dashboard/users*`, (route) =>
+    fulfillJson(route, {
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 0,
+    }),
+  );
+  await page.route(`${API_URL}/lila/forms`, (route) => fulfillJson(route, []));
+  await page.route(`${API_URL}/admin/subscription/stats`, (route) =>
+    fulfillJson(route, {
+      totalSubscribers: 0,
+      byStatus: { active: 0, past_due: 0, canceled: 0 },
+      byPlan: [],
+      mrrInCents: 0,
+    }),
+  );
+  await page.route(`${API_URL}/admin/subscription/subscribers*`, (route) =>
+    fulfillJson(route, { items: [], nextCursor: null }),
+  );
+  await page.route(`${API_URL}/lila/plans`, (route) => fulfillJson(route, []));
+  // Registered last so it wins over the broader `/admin/dashboard/users*` mock above.
+  await mockRecentUsersEmpty(page);
+}
+
+test.describe("Admin layout — sidebar / rail / tab bar", () => {
+  test("sidebar 1280 — navega entre las 4 secciones y marca la activa", async ({
+    page,
+  }) => {
     await seedAuthToken(page);
-    await page.route(`${API_URL}/admin/dashboard/stats*`, (route) =>
-      fulfillJson(route, buildStats(30)),
-    );
-    await page.route(`${API_URL}/admin/dashboard/users*`, (route) =>
-      fulfillJson(route, {
-        data: [],
-        total: 0,
-        page: 1,
-        limit: 20,
-        totalPages: 0,
-      }),
-    );
-    await page.route(`${API_URL}/lila/forms`, (route) =>
-      fulfillJson(route, []),
-    );
-    await page.route(`${API_URL}/admin/subscription/stats`, (route) =>
-      fulfillJson(route, {
-        totalSubscribers: 0,
-        byStatus: { active: 0, past_due: 0, canceled: 0 },
-        byPlan: [],
-        mrrInCents: 0,
-      }),
-    );
-    await page.route(`${API_URL}/admin/subscription/subscribers*`, (route) =>
-      fulfillJson(route, { items: [], nextCursor: null }),
-    );
-    await page.route(`${API_URL}/lila/plans`, (route) =>
-      fulfillJson(route, []),
-    );
-    await mockRecentUsersEmpty(page);
+    await mockAdminPagesApis(page);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
     await expect(page.getByTestId("dashboard-page")).toBeVisible();
+    await expect(page.getByTestId("admin-sidebar")).toBeVisible();
+    await expect(page.getByTestId("admin-tab-bar")).toBeHidden();
+    await expect(page.getByTestId("nav-item-dashboard")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
-    await page.getByRole("link", { name: "Users" }).click();
+    await page.getByRole("link", { name: "Usuarias" }).click();
     await expect(page.getByTestId("users-page")).toBeVisible();
+    await expect(page.getByTestId("nav-item-users")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
-    await page.getByRole("link", { name: "Reports" }).click();
+    await page.getByRole("link", { name: "Reportes" }).click();
     await expect(page.getByTestId("reports-page")).toBeVisible();
+
+    await page.getByRole("link", { name: "Formularios" }).click();
+    await expect(page.getByTestId("forms-page")).toBeVisible();
 
     await page.getByRole("link", { name: "Dashboard" }).click();
     await expect(page.getByTestId("dashboard-page")).toBeVisible();
+    await expect(page.getByTestId("logout-button")).toBeVisible();
+  });
+
+  test("rail 768 — sidebar de 80px, labels solo para lectores de pantalla", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await seedAuthToken(page);
+    await mockAdminPagesApis(page);
+
+    await page.goto(`${BASE_URL}/admin/dashboard`);
+    const sidebar = page.getByTestId("admin-sidebar");
+    await expect(sidebar).toBeVisible();
+    const box = await sidebar.boundingBox();
+    expect(box?.width).toBe(80);
+    // Label visualmente oculto pero sigue siendo el nombre accesible del link.
+    await expect(page.getByRole("link", { name: "Usuarias" })).toBeVisible();
+    await expect(page.getByTestId("admin-tab-bar")).toBeHidden();
+  });
+
+  test("tab bar 375 — reemplaza al sidebar, navega y no hay overflow horizontal", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await seedAuthToken(page);
+    await mockAdminPagesApis(page);
+
+    await page.goto(`${BASE_URL}/admin/dashboard`);
+    await expect(page.getByTestId("dashboard-content")).toBeVisible();
+    await expect(page.getByTestId("admin-sidebar")).toBeHidden();
+    await expect(page.getByTestId("admin-tab-bar")).toBeVisible();
+    await expect(page.getByTestId("logout-button-mobile")).toBeVisible();
+
+    const scrollWidth = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    expect(scrollWidth).toBeLessThanOrEqual(375);
+
+    await page.getByTestId("tab-item-users").click();
+    await expect(page.getByTestId("users-page")).toBeVisible();
+    await expect(page.getByTestId("tab-item-users")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 });
 
