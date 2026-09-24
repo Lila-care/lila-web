@@ -94,7 +94,7 @@ function ActivitySection({ stats }: ActivitySectionProps) {
       <SectionTitle id="activity-section-title" title="Actividad" />
       <div className="min-w-0">
         <LedgerHeader
-          className={`hidden md:grid ${KPI_LEDGER_COLUMNS}`}
+          className={`hidden xl:grid ${KPI_LEDGER_COLUMNS}`}
         >
           <span>Indicador</span>
           <span className="text-right">Total</span>

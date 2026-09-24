@@ -66,7 +66,7 @@ function DashboardPage() {
         className="flex min-h-full flex-col gap-12 px-4 pt-6 pb-10 md:px-8 md:pt-8 lg:pt-10 lg:pr-10 lg:pb-16 lg:pl-16"
         data-testid="dashboard-page"
       >
-        <header className="flex flex-wrap items-center justify-between gap-4">
+        <header className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="type-h4-strong text-text-primary">Dashboard</h1>
           <RangeSelector
             value={days}
@@ -106,7 +106,7 @@ function DashboardPage() {
               <div className="min-w-0 flex-1 xl:max-w-180">
                 <ActivitySection stats={stats} />
               </div>
-              <div className="min-w-0 xl:w-79 xl:shrink-0">
+              <div className="min-w-0 md:max-w-79 xl:w-79 xl:shrink-0">
                 <TierSection profileTiers={stats.profileTiers} />
               </div>
             </div>

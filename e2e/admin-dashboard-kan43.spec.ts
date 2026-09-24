@@ -301,8 +301,23 @@ test.describe("Admin Dashboard — ingresos, tier y usuarias recientes (Ledger v
       page.getByTestId("recent-users-sort-conversations"),
     ).toBeHidden();
     await expect(page.getByTestId("recent-user-row")).toContainText(
-      "5 conversaciones",
+      "5 conversaciones · 3 reportes",
     );
+    // Fecha relativa en la primera línea, a la derecha del email.
+    const recentRow = page.getByTestId("recent-user-row");
+    const emailBox = await recentRow
+      .getByText("usuaria-con-un-email-bastante-largo@example.com")
+      .boundingBox();
+    const dateBox = await recentRow
+      .getByTestId("recent-user-last-activity")
+      .boundingBox();
+    const countsBox = await recentRow.getByText(/conversaciones/).boundingBox();
+    expect(emailBox && dateBox && countsBox).toBeTruthy();
+    if (emailBox && dateBox && countsBox) {
+      expect(dateBox.x).toBeGreaterThan(emailBox.x);
+      expect(Math.abs(dateBox.y - emailBox.y)).toBeLessThan(emailBox.height);
+      expect(countsBox.y).toBeGreaterThan(emailBox.y);
+    }
 
     // KPI row apilada: el detalle queda debajo del label, no en la misma línea.
     const row = page.getByTestId("kpi-row-new-users");

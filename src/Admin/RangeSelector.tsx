@@ -46,12 +46,12 @@ export function RangeSelector({
       >
         <SelectTrigger
           size="sm"
-          className="type-body-md w-32 rounded-lg border-border-strong bg-surface-default text-text-primary shadow-none"
+          className="type-body-md w-32 rounded-(--radius-ledger-sm) border-border-strong bg-surface-default text-text-primary shadow-none"
           data-testid="range-selector"
         >
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="rounded-lg border-border-default bg-surface-default shadow-none">
+        <SelectContent className="rounded-(--radius-ledger-sm) border-border-default bg-surface-default shadow-none">
           {RANGE_OPTIONS.map((opt) => (
             <SelectItem
               key={opt.value}

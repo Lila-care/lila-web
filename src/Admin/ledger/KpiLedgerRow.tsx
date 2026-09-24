@@ -9,8 +9,8 @@ interface KpiLedgerRowProps {
   testId: string;
 }
 
-// Same DOM order serves both layouts: below `md` a 2x2 grid (label | total over
-// detail | trend — Figma 375 "KPI rows stacked"), from `md` a single 40px ledger line.
+// Same DOM order serves both layouts: below `xl` a 2x2 grid (label | total over
+// detail | trend — Figma 768/375 "KPI rows stacked"), from `xl` a single 40px ledger line.
 
 export function KpiLedgerRow({
   label,
@@ -21,7 +21,7 @@ export function KpiLedgerRow({
 }: KpiLedgerRowProps) {
   return (
     <li
-      className={`grid ${KPI_LEDGER_COLUMNS} items-center gap-x-2 gap-y-1 border-b border-border-default py-2 md:h-10 md:gap-x-0 md:py-0`}
+      className={`grid ${KPI_LEDGER_COLUMNS} items-center gap-x-2 gap-y-1 border-b border-border-default py-2 xl:h-10 xl:gap-x-0 xl:py-0`}
       data-testid={testId}
     >
       <span className="type-body-md min-w-0 truncate text-text-primary">
@@ -33,10 +33,10 @@ export function KpiLedgerRow({
       >
         {total}
       </span>
-      <span className="type-body-sm min-w-0 truncate text-text-secondary md:pl-6">
+      <span className="type-body-sm min-w-0 break-words text-text-secondary xl:truncate xl:pl-6">
         {detail}
       </span>
-      <span className="flex justify-end md:justify-start">{trend}</span>
+      <span className="flex justify-end xl:justify-start">{trend}</span>
     </li>
   );
 }

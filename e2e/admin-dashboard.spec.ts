@@ -336,9 +336,37 @@ test.describe("Admin layout — sidebar / rail / tab bar", () => {
     await page.getByRole("link", { name: "Dashboard" }).click();
     await expect(page.getByTestId("dashboard-page")).toBeVisible();
     await expect(page.getByTestId("logout-button")).toBeVisible();
+
+    // Wordmark "Lila Admin" en una sola línea (no apilado).
+    const lila = await page
+      .getByTestId("admin-sidebar")
+      .getByText("Lila", { exact: true })
+      .boundingBox();
+    const admin = await page
+      .getByTestId("admin-sidebar")
+      .getByText("Admin", { exact: true })
+      .boundingBox();
+    expect(lila && admin).toBeTruthy();
+    if (lila && admin) {
+      expect(admin.x).toBeGreaterThan(lila.x + lila.width);
+      expect(admin.y).toBeLessThan(lila.y + lila.height);
+    }
+
+    // Íconos del nav en teal-500 tanto activos como inactivos.
+    for (const id of ["dashboard", "users"]) {
+      await expect(
+        page.getByTestId(`nav-item-${id}`).locator("svg"),
+      ).toHaveCSS("color", "rgb(19, 196, 163)");
+    }
+
+    // RangeSelector con radio 8px (radius-sm de Figma).
+    await expect(page.getByTestId("range-selector")).toHaveCSS(
+      "border-radius",
+      "8px",
+    );
   });
 
-  test("rail 768 — sidebar de 80px, labels solo para lectores de pantalla", async ({
+  test("rail 768 — 80px, ícono con label debajo, alto completo y Actividad apilada", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
@@ -346,13 +374,43 @@ test.describe("Admin layout — sidebar / rail / tab bar", () => {
     await mockAdminPagesApis(page);
 
     await page.goto(`${BASE_URL}/admin/dashboard`);
+    await expect(page.getByTestId("dashboard-content")).toBeVisible();
     const sidebar = page.getByTestId("admin-sidebar");
     await expect(sidebar).toBeVisible();
     const box = await sidebar.boundingBox();
     expect(box?.width).toBe(80);
-    // Label visualmente oculto pero sigue siendo el nombre accesible del link.
-    await expect(page.getByRole("link", { name: "Usuarias" })).toBeVisible();
     await expect(page.getByTestId("admin-tab-bar")).toBeHidden();
+
+    // Label visible debajo del ícono.
+    const usersItem = page.getByTestId("nav-item-users");
+    await expect(usersItem.getByText("Usuarias")).toBeVisible();
+    const icon = await usersItem.locator("svg").boundingBox();
+    const label = await usersItem.getByText("Usuarias").boundingBox();
+    expect(icon && label).toBeTruthy();
+    if (icon && label) expect(label.y).toBeGreaterThan(icon.y + icon.height - 1);
+    await expect(page.getByTestId("logout-button")).toContainText("Salir");
+
+    // El fondo del rail cubre todo el alto del documento aunque el contenido sea largo.
+    const pageHeight = await page.evaluate(
+      () => document.documentElement.scrollHeight,
+    );
+    expect(pageHeight).toBeGreaterThan(1024);
+    expect(box?.height).toBeGreaterThanOrEqual(pageHeight - 1);
+
+    // Actividad apilada: sin header de columnas, detalle completo debajo del label.
+    await expect(
+      page.getByTestId("activity-section").getByText("Indicador"),
+    ).toBeHidden();
+    const row = page.getByTestId("kpi-row-active-users");
+    const rowLabel = await row.getByText("Usuarias activas").boundingBox();
+    const detail = row.getByText("Escribieron o registraron ciclo");
+    await expect(detail).toBeVisible();
+    const detailBox = await detail.boundingBox();
+    if (rowLabel && detailBox) expect(detailBox.y).toBeGreaterThan(rowLabel.y);
+
+    // Perfiles por tier no ocupa todo el ancho (~316px).
+    const tier = await page.getByTestId("tier-section").boundingBox();
+    expect(tier?.width).toBeLessThanOrEqual(316 + 1);
   });
 
   test("tab bar 375 — reemplaza al sidebar, navega y no hay overflow horizontal", async ({
@@ -366,7 +424,21 @@ test.describe("Admin layout — sidebar / rail / tab bar", () => {
     await expect(page.getByTestId("dashboard-content")).toBeVisible();
     await expect(page.getByTestId("admin-sidebar")).toBeHidden();
     await expect(page.getByTestId("admin-tab-bar")).toBeVisible();
-    await expect(page.getByTestId("logout-button-mobile")).toBeVisible();
+    // Sin top bar: el logout es un link de texto al final del contenido.
+    await expect(page.getByTestId("logout-button-mobile")).toHaveText(
+      "Cerrar sesión",
+    );
+    const header = await page.getByRole("heading", { name: "Dashboard" }).boundingBox();
+    expect(header?.y).toBeLessThan(80);
+
+    // La tab bar no tapa el final del contenido.
+    await page.getByTestId("logout-button-mobile").scrollIntoViewIfNeeded();
+    const logoutBox = await page.getByTestId("logout-button-mobile").boundingBox();
+    const tabBarBox = await page.getByTestId("admin-tab-bar").boundingBox();
+    expect(logoutBox && tabBarBox).toBeTruthy();
+    if (logoutBox && tabBarBox) {
+      expect(logoutBox.y + logoutBox.height).toBeLessThanOrEqual(tabBarBox.y);
+    }
 
     const scrollWidth = await page.evaluate(
       () => document.documentElement.scrollWidth,

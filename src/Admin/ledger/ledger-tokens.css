@@ -15,9 +15,14 @@
   --teal-700: #0b7562;
   --radius-xs: 4px;
   --border-strong: #957ba3;
-  /* teal/500 — marca de nav activo. Estaba en KAN-30 y producto la sacó del paquete
-     (ver comentario de --nav-icon-default en tokens.css); el Ledger la vuelve a usar solo
-     para la marca vertical de 2px, así que tampoco está aprobada todavía. */
+  /* Figma radius/sm (8px). Not mapped onto Tailwind's --radius-sm: the package defines
+     --radius-sm/md/lg/xl as calc()s over a --radius that nothing declares, so rounded-sm/lg
+     resolve to an invalid value (square corners) app-wide. Namespaced to avoid silently
+     changing every other rounded-* in the app; drop it once the package defines --radius. */
+  --radius-ledger-sm: 8px; /* used as rounded-(--radius-ledger-sm) so tailwind-merge dedupes it */
+  /* teal/500 — íconos del nav (activos e inactivos) y marca de item activo. Estaba en KAN-30
+     y producto la sacó del paquete (ver comentario de --nav-icon-default en tokens.css); el
+     Ledger la vuelve a usar, así que tampoco está aprobada todavía. */
   --teal-500: #13c4a3;
 }
 

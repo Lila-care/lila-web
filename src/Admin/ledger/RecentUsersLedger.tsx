@@ -30,28 +30,44 @@ function SortHeader({ label, sortKey, activeKey, onSort }: SortHeaderProps) {
   );
 }
 
+const COUNT_CELL_CLASS =
+  "type-body-sm tabular-nums text-text-secondary lg:type-body-md lg:text-right lg:text-text-primary";
+
+// Stacked (<lg, Figma 768/375): line 1 = email | relative date, line 2 = "N conversaciones ·
+// N reportes". The counts wrapper is `lg:contents` so from lg its two cells become the grid's
+// columns 2 and 3, and the date falls into column 4.
 function RecentUserRow({ user }: { user: DashboardUserListItemDto }) {
   return (
     <li
-      className={`grid ${RECENT_USERS_COLUMNS} items-center gap-x-3 border-b border-border-default py-2 lg:h-8 lg:gap-x-0 lg:py-0`}
+      className={`grid ${RECENT_USERS_COLUMNS} items-center gap-x-3 gap-y-0.5 border-b border-border-default py-2 lg:h-8 lg:gap-x-0 lg:py-0`}
       data-testid="recent-user-row"
     >
       <span
-        className={`type-body-md col-span-3 min-w-0 truncate lg:col-span-1 ${
+        className={`type-body-md col-start-1 row-start-1 min-w-0 truncate ${
           user.email ? "text-text-primary" : "text-text-secondary"
         }`}
       >
         {user.email ?? "Sin email"}
       </span>
-      <span className="type-body-sm lg:type-body-md tabular-nums text-text-secondary lg:text-right lg:text-text-primary">
-        {formatCount(user.conversations)}
-        <span className="lg:hidden"> conversaciones</span>
-      </span>
-      <span className="type-body-sm lg:type-body-md tabular-nums text-text-secondary lg:text-right lg:text-text-primary">
-        {formatCount(user.cycleReports)}
-        <span className="lg:hidden"> reportes</span>
-      </span>
-      <span className="type-body-sm text-right text-text-secondary">
+      <div className="col-span-2 row-start-2 flex gap-1 lg:contents">
+        <span className={COUNT_CELL_CLASS}>
+          {formatCount(user.conversations)}
+          <span className="lg:hidden"> conversaciones</span>
+        </span>
+        {/* Spaces kept in the text so the line reads "N conversaciones · N reportes" when
+            copied or read by a screen reader, not just visually via the flex gap. */}
+        <span className="type-body-sm text-text-secondary lg:hidden">
+          {" · "}
+        </span>
+        <span className={COUNT_CELL_CLASS}>
+          {formatCount(user.cycleReports)}
+          <span className="lg:hidden"> reportes</span>
+        </span>
+      </div>
+      <span
+        className="type-body-sm col-start-2 row-start-1 text-right text-text-secondary lg:col-start-4"
+        data-testid="recent-user-last-activity"
+      >
         {formatRelativeDate(user.lastActivityAt)}
       </span>
     </li>

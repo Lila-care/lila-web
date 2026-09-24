@@ -1,9 +1,13 @@
-import { Line, LineChart, YAxis, type DotItemDotProps } from "recharts";
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  YAxis,
+  type DotItemDotProps,
+} from "recharts";
 import { DailyCount } from "@/api/dashboard";
 import { describeTrend } from "@/Admin/dashboardFormat";
 
-const WIDTH = 160;
-const HEIGHT = 24;
 // Keeps the end dot (r=2) and the 1.5px stroke from being clipped at the SVG edge.
 const CHART_MARGIN = { top: 3, right: 3, bottom: 3, left: 3 };
 
@@ -33,31 +37,32 @@ export function Sparkline({ label, byDay }: SparklineProps) {
       />
     ) : null;
 
+  // 96x20 in the stacked KPI row (<xl), 160x24 in the desktop ledger line (Figma).
   return (
     <div
       role="img"
       aria-label={`${label}: ${describeTrend(byDay)}`}
-      className="shrink-0"
+      className="h-5 w-24 shrink-0 xl:h-6 xl:w-40"
       data-testid="sparkline"
     >
-      <LineChart
-        width={WIDTH}
-        height={HEIGHT}
-        data={byDay}
-        margin={CHART_MARGIN}
-        accessibilityLayer={false}
-      >
-        <YAxis hide domain={[0, yDomainMax]} />
-        <Line
-          type="linear"
-          dataKey="count"
-          stroke="var(--text-secondary)"
-          strokeWidth={1.5}
-          dot={renderEndDot}
-          activeDot={false}
-          isAnimationActive={false}
-        />
-      </LineChart>
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={byDay}
+          margin={CHART_MARGIN}
+          accessibilityLayer={false}
+        >
+          <YAxis hide domain={[0, yDomainMax]} />
+          <Line
+            type="linear"
+            dataKey="count"
+            stroke="var(--text-secondary)"
+            strokeWidth={1.5}
+            dot={renderEndDot}
+            activeDot={false}
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
