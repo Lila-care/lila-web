@@ -5,15 +5,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev         # Start dev server (Vite HMR, port 5173)
-npm run build       # Type-check (tsc -b) + production build
-npm run type-check  # tsc -b --noEmit
-npm run lint        # ESLint
-npm run preview     # Serve the dist/ build locally
-npm run test:e2e    # Playwright (starts the dev server itself, see playwright.config.ts)
+yarn dev            # Start dev server (Vite HMR, port 5173)
+yarn build          # Type-check (tsc -b) + production build
+yarn type-check     # tsc -b --noEmit
+yarn lint           # ESLint
+yarn preview        # Serve the dist/ build locally
+yarn test:e2e       # Playwright (starts the dev server itself, see playwright.config.ts)
 ```
 
-Package manager: npm (there is a `package-lock.json`; don't introduce yarn/pnpm lockfiles).
+Package manager: yarn 1 (the lockfile is `yarn.lock`; don't introduce npm/pnpm lockfiles).
+`@lila-care/*` comes from GitHub Packages (`.npmrc` reads `NODE_AUTH_TOKEN`; the token needs
+`read:packages`).
 
 ## Environment
 
@@ -69,12 +71,13 @@ No React Query/SWR — data fetching is done via hooks that hold their own `useS
   recharts, StatusMarker, RecentUsersLedger, skeleton/error/missing-value) — candidates to promote
   to `@lila-care/design-system` later.
 - `src/Admin/ledger/ledger-tokens.css` holds tokens NOT yet approved (`--teal-700`, `--teal-500`,
-  `--radius-xs`, `--radius-ledger-sm`, `--border-strong`, `type-*` text utilities), all marked
+  `--radius-xs`, `--border-strong`, `type-*` text utilities), all marked
   `PENDING design-token-sync approval`. Move them to the package's `tokens.css` once approved.
   Text utilities use the `type-` prefix on purpose: `cn()`/tailwind-merge treats unknown `text-*`
   classes as colors and drops them.
-- Package gotcha: `rounded-sm/md/lg/xl` render square because the package's `tokens.css` builds
-  them as `calc()` over a `--radius` nobody defines. Use an explicit radius variable.
+- Radius: before `@lila-care/design-system@0.4.1`, `rounded-sm/md/lg/xl` rendered square (the
+  package built them as `calc()` over an undefined `--radius`). Fixed in 0.4.1 (`--radius: 12px`
+  → sm 8px, md 10px, lg 12px, xl 16px); use `rounded-sm` for Figma's radius/sm (8px).
 - `AdminLayout.tsx` + `AdminNavItem.tsx` — shared shell for every admin page: 220px sidebar
   (`lg+`), 80px rail with labels (`md`), fixed bottom tab bar + "Cerrar sesión" link at the end
   of the content (below `md`). Active item = semibold label + 2px teal mark, never a filled box.

@@ -40,7 +40,7 @@ export function LedgerError({
         variant="outline"
         size="sm"
         onClick={onRetry}
-        className="rounded-(--radius-ledger-sm) border-border-strong"
+        className="rounded-sm border-border-strong"
       >
         Reintentar
       </Button>

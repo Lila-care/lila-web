@@ -449,10 +449,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@lila-care/design-system@^0.4.0":
-  version "0.4.0"
-  resolved "https://npm.pkg.github.com/download/@lila-care/design-system/0.4.0/e5e9a90ab3320181d6ffd153f22a03e4430c05e7#e5e9a90ab3320181d6ffd153f22a03e4430c05e7"
-  integrity sha512-2MfDhvKXHia9B8QWleQ6GaBpDtk1XB45v55DNtvcQ5Kwsayw5TXZBSKIkLhVwGvP7IGuVgZET2pF9/jrLAEbvg==
+"@lila-care/design-system@^0.4.1":
+  version "0.4.1"
+  resolved "https://npm.pkg.github.com/download/@lila-care/design-system/0.4.1/93b5ef560ab033885a7711c7612896a3ffeb5707#93b5ef560ab033885a7711c7612896a3ffeb5707"
+  integrity sha512-28k70D7o0HTndFs6DRNSpwf7uyBuB4JutKMWRCvZgqEkASD7bbCeflZXaNHC0XIIDoqp0NnRkrcS/TS+XlqPRQ==
   dependencies:
     class-variance-authority "^0.7.1"
     clsx "^2.1.1"
