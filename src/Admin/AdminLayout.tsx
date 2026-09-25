@@ -30,6 +30,8 @@ const NAV_LINKS: AdminNavLink[] = [
     label: "Formularios",
     icon: ClipboardList,
   },
+  // Figma Gestión de Planes reuses the clipboard-list icon for Planes.
+  { id: "plans", href: "/admin/plans", label: "Planes", icon: ClipboardList },
 ];
 
 interface AdminLayoutProps {
