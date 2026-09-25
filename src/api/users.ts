@@ -70,3 +70,14 @@ export async function fetchUserDetails(
   });
   return handleResponse<DashboardUserDetailDto>(res);
 }
+
+export async function fetchRecentUsers(
+  token: string,
+  limit: number,
+): Promise<DashboardUserListItemDto[]> {
+  const res = await authFetch(
+    `${BASE_URL}/admin/dashboard/users/recent?limit=${limit}`,
+    { headers: authHeaders(token) },
+  );
+  return handleResponse<DashboardUserListItemDto[]>(res);
+}

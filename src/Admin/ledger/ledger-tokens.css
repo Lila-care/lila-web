@@ -1,0 +1,78 @@
+/*
+ * Admin "Ledger" (Dashboard v2, Figma fAVj1toZn8nIMNc2GBblKY página 304:9) — tokens locales.
+ *
+ * Importado desde src/index.css para que Tailwind v4 genere las utilidades (bg-teal-700,
+ * rounded-xs, border-border-strong, type-body-md-strong, ...). Nombre de variable en Figma →
+ * custom property, "/" → "-" (misma convención que KAN-30 en @lila-care/design-system).
+ *
+ * Los text styles usan prefijo `type-` (no `text-`) a propósito: tailwind-merge (cn()) trata
+ * cualquier `text-<desconocido>` como color y descartaría `text-body-md` al combinarlo con
+ * `text-text-secondary`.
+ */
+
+/* PENDING design-token-sync approval — mover a @lila-care/design-system tokens.css cuando se apruebe */
+:root {
+  --teal-700: #0b7562;
+  --radius-xs: 4px;
+  --border-strong: #957ba3;
+  /* teal/500 — íconos del nav (activos e inactivos) y marca de item activo. Estaba en KAN-30
+     y producto la sacó del paquete (ver comentario de --nav-icon-default en tokens.css); el
+     Ledger la vuelve a usar, así que tampoco está aprobada todavía. */
+  --teal-500: #13c4a3;
+}
+
+/* PENDING design-token-sync approval — mover a @lila-care/design-system tokens.css cuando se apruebe */
+@theme inline {
+  --color-teal-700: var(--teal-700);
+  --color-teal-500: var(--teal-500);
+  --color-border-strong: var(--border-strong);
+  --radius-xs: var(--radius-xs);
+}
+
+/*
+ * Text styles. h4-strong / body-lg-strong / body-md-strong / caption-medium son nuevos del
+ * Ledger y están PENDING design-token-sync approval — mover a @lila-care/design-system
+ * tokens.css cuando se apruebe. El resto (display, body-md, body-sm, caption) existen en
+ * Figma pero el paquete todavía no exporta tipografía; se definen acá con el mismo nombre
+ * para que la migración sea un move sin renombrar.
+ */
+@utility type-display-strong {
+  font-size: 48px;
+  line-height: 52px;
+  font-weight: 700;
+}
+@utility type-h4-strong {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+}
+@utility type-body-lg-strong {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+@utility type-body-md {
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+}
+@utility type-body-md-strong {
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+@utility type-body-sm {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+}
+@utility type-caption {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 400;
+}
+@utility type-caption-medium {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+}
