@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import selloLila from "/sello_vinotinto.svg";
 import { confirmNewPassword } from "@/api/lila";
 import { useAuth } from "@/auth/AuthContext";
+import { adminHomePath, readRolesFromIdToken } from "@/lib/adminRoles";
 
 interface LocationState {
   email: string;
@@ -41,7 +42,7 @@ function ChangePassword() {
     try {
       const tokens = await confirmNewPassword({ email, newPassword, session });
       login(tokens);
-      navigate("/admin/dashboard");
+      navigate(adminHomePath(readRolesFromIdToken(tokens.idToken)));
     } catch {
       setError("No se pudo cambiar la contraseña. Intenta de nuevo.");
     } finally {
