@@ -685,7 +685,7 @@ test.describe("Admin Plans — navegación y responsive", () => {
       "aria-current",
       "page",
     );
-    await expect(tabBar.getByRole("link")).toHaveCount(5);
+    await expect(tabBar.getByRole("link")).toHaveCount(6); // Dashboard, Usuarias, Reportes, Formularios, Planes, Contenido
 
     // Crear plan pasa debajo de las tabs, a todo el ancho.
     await expect(page.getByTestId("plans-create-button")).toBeHidden();
@@ -787,7 +787,7 @@ test.describe("Admin Plans — payloads, foco y errores del BE", () => {
     ]);
   });
 
-  test("editar plan — vaciar la descripción envía \"\"", async ({ page }) => {
+  test('editar plan — vaciar la descripción envía ""', async ({ page }) => {
     await seedAuthToken(page);
     const requests = await mockPlansApi(page, {
       plans: [buildPlan({ description: "Acceso completo" })],
@@ -809,7 +809,9 @@ test.describe("Admin Plans — payloads, foco y errores del BE", () => {
     });
   });
 
-  test("tras guardar, el foco vuelve al Editar de la fila", async ({ page }) => {
+  test("tras guardar, el foco vuelve al Editar de la fila", async ({
+    page,
+  }) => {
     await seedAuthToken(page);
     await mockPlansApi(page, { plans: [buildPlan()] });
 
