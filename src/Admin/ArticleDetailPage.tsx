@@ -52,7 +52,7 @@ function ArticleDetailPage() {
   return (
     <AdminLayout>
       <div
-        className="min-h-full bg-white px-4 py-6 md:p-10"
+        className="min-h-full px-4 py-6 md:p-10"
         data-testid="article-detail-page"
       >
         <Link
