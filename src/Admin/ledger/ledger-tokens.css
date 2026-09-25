@@ -19,6 +19,10 @@
      y producto la sacó del paquete (ver comentario de --nav-icon-default en tokens.css); el
      Ledger la vuelve a usar, así que tampoco está aprobada todavía. */
   --teal-500: #13c4a3;
+  /* Scrim detrás del panel lateral de Gestión de Planes (Figma fAVj1toZn8nIMNc2GBblKY,
+     rgba(77,54,79,0.4)). El paquete no tiene token de overlay; los modales del chat usan
+     bg-black/60 hardcodeado. */
+  --overlay-scrim: rgba(77, 54, 79, 0.4);
 }
 
 /* PENDING design-token-sync approval — mover a @lila-care/design-system tokens.css cuando se apruebe */
@@ -26,6 +30,7 @@
   --color-teal-700: var(--teal-700);
   --color-teal-500: var(--teal-500);
   --color-border-strong: var(--border-strong);
+  --color-overlay-scrim: var(--overlay-scrim);
   --radius-xs: var(--radius-xs);
 }
 
@@ -75,4 +80,31 @@
   font-size: 11px;
   line-height: 16px;
   font-weight: 500;
+}
+
+/*
+ * Gestión de Planes (Figma fAVj1toZn8nIMNc2GBblKY, /admin/plans) — PENDING design-token-sync
+ * approval, mover a @lila-care/design-system tokens.css cuando se apruebe. h1/h2/h3 son los
+ * text styles text/h1, text/h2, text/h3 de Figma. label-sm-strong es el label de tab en 375
+ * (332:2255): 13px semibold sin text style con nombre en Figma — nombre provisional.
+ */
+@utility type-h1 {
+  font-size: 36px;
+  line-height: 44px;
+  font-weight: 700;
+}
+@utility type-h2 {
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 600;
+}
+@utility type-h3 {
+  font-size: 22px;
+  line-height: 30px;
+  font-weight: 600;
+}
+@utility type-label-sm-strong {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
 }
