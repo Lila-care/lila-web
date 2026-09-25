@@ -1,100 +1,50 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  AlertCircle,
-  CalendarDays,
-  type LucideIcon,
-  MessageCircle,
-  Repeat,
-  UserCheck,
-  UserPlus,
-  Users,
-} from "lucide-react";
 import AdminLayout from "@/Admin/AdminLayout";
 import { useDashboardStats } from "@/Admin/useDashboardStats";
 import { RangeSelector } from "@/Admin/RangeSelector";
-import { DashboardStatsDto } from "@/api/dashboard";
-import {
-  Alert,
-  AlertDescription,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  KPICard,
-  Skeleton,
-} from "@lila-care/design-system";
+import RevenueSection from "@/Admin/RevenueSection";
+import ActivitySection from "@/Admin/ActivitySection";
+import TierSection from "@/Admin/TierSection";
+import RecentUsersSection from "@/Admin/RecentUsersSection";
+import { SectionTitle } from "@/Admin/ledger/SectionTitle";
+import { LedgerSkeleton } from "@/Admin/ledger/LedgerSkeleton";
+import { LedgerError } from "@/Admin/ledger/LedgerError";
 
-interface KpiCardConfig {
-  testId: string;
-  label: string;
-  value: string | number;
-  icon: LucideIcon;
-  sparklineData?: number[];
-}
+const SKELETON_SECTIONS = [
+  { id: "revenue", title: "Ingresos" },
+  { id: "activity", title: "Actividad" },
+  { id: "recent-users", title: "Usuarias recientes" },
+];
 
-// The BE stats contract has no period-over-period comparison field yet, so `showDelta` stays
-// false for every card — see contract note in the FE report, not something to invent client-side.
-// Kept as a plain function (not inline JSX) so the 5 near-identical KPICard configs don't
-// duplicate the same prop block 5 times in the render tree.
-function buildKpiCards(stats: DashboardStatsDto): KpiCardConfig[] {
-  return [
-    {
-      testId: "kpi-card-new-users",
-      label: "Nuevas usuarias",
-      value: stats.newUsers.total,
-      icon: UserPlus,
-      sparklineData: stats.newUsers.byDay.map((d) => d.count),
-    },
-    {
-      testId: "kpi-card-active-users",
-      label: "Usuarias activas",
-      value: stats.activeUsers.total,
-      icon: UserCheck,
-      // No `byDay` breakdown for active users in the BE contract — nothing to chart.
-    },
-    {
-      testId: "kpi-card-retention",
-      label: "Retención 30d",
-      value: `${Math.round(stats.retention.rate * 100)}%`,
-      icon: Repeat,
-      // No time series for retention in the BE contract.
-    },
-    {
-      testId: "kpi-card-conversations",
-      label: "Conversaciones",
-      value: stats.conversations.total,
-      icon: MessageCircle,
-      sparklineData: stats.conversations.byDay.map((d) => d.count),
-    },
-    {
-      testId: "kpi-card-cycle-reports",
-      label: "Reportes de ciclo",
-      value: stats.cycleReports.total,
-      icon: CalendarDays,
-      sparklineData: stats.cycleReports.byDay.map((d) => d.count),
-    },
-  ];
-}
-
+// Figma loading frames (314:754 / 314:1472): section titles stay, rows become flat lines.
 function DashboardSkeleton() {
   return (
-    <div
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5"
-      data-testid="dashboard-loading"
-    >
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Card key={i} variant="neo">
-          <CardHeader>
-            <Skeleton className="h-4 w-24" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-8 w-16" />
-            <Skeleton className="mt-3 h-10 w-full" />
-          </CardContent>
-        </Card>
+    <div className="flex flex-col gap-12" data-testid="dashboard-loading">
+      {SKELETON_SECTIONS.map(({ id, title }) => (
+        <div key={id} className="flex flex-col gap-2">
+          <SectionTitle id={`skeleton-${id}`} title={title} />
+          <LedgerSkeleton rows={3} />
+        </div>
       ))}
     </div>
   );
+}
+
+// Announces only on a range-change refetch, never on the very first mount (that would be
+// redundant noise for screen reader users who just landed on the page).
+function useRangeAnnouncement(rangeDays: number | undefined) {
+  const [announcement, setAnnouncement] = useState("");
+  const hasLoadedOnceRef = useRef(false);
+
+  useEffect(() => {
+    if (rangeDays === undefined) return;
+    if (hasLoadedOnceRef.current) {
+      setAnnouncement(`Mostrando datos de los últimos ${rangeDays} días.`);
+    }
+    hasLoadedOnceRef.current = true;
+  }, [rangeDays]);
+
+  return announcement;
 }
 
 function DashboardPage() {
@@ -107,127 +57,62 @@ function DashboardPage() {
     error,
     refetch,
   } = useDashboardStats();
-  const [announcement, setAnnouncement] = useState("");
-  const hasLoadedOnceRef = useRef(false);
-
-  // Announce only on a range-change refetch, never on the very first mount (that would be
-  // redundant noise for screen reader users who just landed on the page).
-  useEffect(() => {
-    if (!stats) return;
-    if (hasLoadedOnceRef.current) {
-      setAnnouncement(
-        `Mostrando datos de los últimos ${stats.range.days} días.`,
-      );
-    }
-    hasLoadedOnceRef.current = true;
-  }, [stats]);
-
-  const isFullyEmpty =
-    !!stats &&
-    stats.newUsers.total === 0 &&
-    stats.activeUsers.total === 0 &&
-    stats.cycleReports.total === 0 &&
-    stats.conversations.total === 0;
+  const announcement = useRangeAnnouncement(stats?.range.days);
+  const hasError = !isInitialLoading && !!error;
 
   return (
-    <AdminLayout>
+    <AdminLayout navTone={hasError ? "neutral" : "default"}>
       <div
-        className="min-h-full bg-neutral-50 px-10 py-8"
+        className="flex min-h-full flex-col gap-12 px-4 pt-6 pb-10 md:px-8 md:pt-8 lg:pt-10 lg:pr-10 lg:pb-16 lg:pl-16"
         data-testid="dashboard-page"
       >
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-neutral-900">
-                Dashboard
-              </h1>
-              <p className="text-sm text-neutral-600">
-                Resumen de actividad de Lila
-              </p>
-            </div>
-            <RangeSelector
-              value={days}
-              onChange={setDays}
-              disabled={isInitialLoading}
-              loading={isRefetching}
-            />
-          </div>
+        <header className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+          <h1 className="type-h4-strong text-text-primary">Dashboard</h1>
+          <RangeSelector
+            value={days}
+            onChange={setDays}
+            disabled={isInitialLoading}
+            loading={isRefetching}
+          />
+        </header>
 
-          <div
-            aria-live="polite"
-            className="sr-only"
-            data-testid="dashboard-live-region"
-          >
-            {announcement}
-          </div>
+        <div
+          aria-live="polite"
+          className="sr-only"
+          data-testid="dashboard-live-region"
+        >
+          {announcement}
+        </div>
 
-          {isInitialLoading && <DashboardSkeleton />}
+        {isInitialLoading && <DashboardSkeleton />}
 
-          {!isInitialLoading && error && (
-            <Alert
-              variant="destructive"
-              className="rounded-xl border-red-200 bg-red-50 p-4"
-              aria-live="polite"
-              data-testid="dashboard-error"
-            >
-              <AlertCircle className="size-4 text-red-700" aria-hidden="true" />
-              <AlertDescription className="text-red-700">
-                <p>Error al cargar el dashboard: {error}</p>
-                <Button variant="outline" size="sm" onClick={refetch}>
-                  Reintentar
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
+        {hasError && (
+          <LedgerError
+            message="No pudimos cargar el dashboard."
+            detail={error ?? undefined}
+            onRetry={refetch}
+            testId="dashboard-error"
+          />
+        )}
 
-          {!isInitialLoading && !error && isFullyEmpty && (
-            <div
-              className="rounded-xl border border-dashed border-neutral-300 bg-secondary py-16 text-center"
-              data-testid="dashboard-empty"
-            >
-              <Users
-                className="mx-auto mb-3 size-12 text-neutral-400"
-                aria-hidden="true"
-              />
-              <p className="text-sm font-medium text-neutral-700">
-                Todavía no hay datos de actividad.
-              </p>
-              <p className="text-sm text-neutral-500">
-                Cuando las usuarias empiecen a registrarse, vas a ver las
-                métricas acá.
-              </p>
-            </div>
-          )}
-
-          {!isInitialLoading && !error && stats && !isFullyEmpty && (
-            <div
-              className={
-                isRefetching
-                  ? "pointer-events-none opacity-50 transition-opacity"
-                  : "transition-opacity"
-              }
-              data-testid="dashboard-content"
-            >
-              <div
-                className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5"
-                data-testid="kpi-row"
-              >
-                {buildKpiCards(stats).map((kpi) => (
-                  <div key={kpi.testId} data-testid={kpi.testId}>
-                    <KPICard
-                      label={kpi.label}
-                      value={kpi.value}
-                      icon={kpi.icon}
-                      sparklineData={kpi.sparklineData}
-                      showSparkline={!!kpi.sparklineData}
-                      showDelta={false}
-                    />
-                  </div>
-                ))}
+        {/* Content stays at full opacity during a range refetch — the RangeSelector caption
+            ("Actualizando…") is the only refetch signal (Ledger spec). Revenue/tier are global
+            counts the BE doesn't scope by `days`, so they render whenever stats loaded, even
+            if the range itself had no activity. */}
+        {!isInitialLoading && !error && stats && (
+          <div className="flex flex-col gap-12" data-testid="dashboard-content">
+            <RevenueSection subscriptions={stats.subscriptions} />
+            <div className="flex min-w-0 flex-col gap-12 pt-4 xl:flex-row xl:gap-20">
+              <div className="min-w-0 flex-1 xl:max-w-180">
+                <ActivitySection stats={stats} />
+              </div>
+              <div className="min-w-0 md:max-w-79 xl:w-79 xl:shrink-0">
+                <TierSection profileTiers={stats.profileTiers} />
               </div>
             </div>
-          )}
-        </div>
+            <RecentUsersSection />
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

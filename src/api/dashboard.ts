@@ -9,6 +9,18 @@ export interface DailyCount {
   count: number;
 }
 
+export interface SubscriptionStatsDto {
+  totalSubscribers: number;
+  byStatus: { active: number; past_due: number; canceled: number };
+  byPlan: { planId: string; planName: string; count: number }[];
+  mrrInCents: number;
+}
+
+export interface ProfileTiersDto {
+  bienestar: number;
+  clinico: number;
+}
+
 export interface DashboardStatsDto {
   range: { days: number; from: string; to: string };
   newUsers: { total: number; byDay: DailyCount[] };
@@ -16,6 +28,8 @@ export interface DashboardStatsDto {
   cycleReports: { total: number; byDay: DailyCount[] };
   conversations: { total: number; byDay: DailyCount[] };
   retention: { newUsersInRange: number; returned: number; rate: number };
+  subscriptions: SubscriptionStatsDto;
+  profileTiers: ProfileTiersDto;
 }
 
 export type DashboardRangeDays = 7 | 30 | 90;
