@@ -58,7 +58,8 @@ export function AdminNavItem({ link, active, tone }: AdminNavItemProps) {
   );
 }
 
-// Mobile bottom tab (Figma 375, 94x64 per item): icon over label, active mark on the top edge.
+// Mobile bottom tab (Figma 375, 75x64 per item with 5 sections): icon over label, active mark
+// on the top edge.
 export function AdminTabItem({ link, active, tone }: AdminNavItemProps) {
   const Icon = link.icon;
   return (
