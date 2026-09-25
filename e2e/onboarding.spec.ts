@@ -5,6 +5,13 @@ const API_URL = process.env.VITE_API_URL ?? "http://localhost:6100";
 
 const CONFIG_BODY = { freeQuestionLimit: 3, upgradePromptLimit: 10 };
 
+const AVATAR_URL = "https://example.com/avatar.png";
+// 1x1 transparent PNG.
+const TINY_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  "base64",
+);
+
 function agentMeBody(overrides: {
   onboardingPending: boolean;
   greetingMessage?: string;
@@ -231,7 +238,7 @@ test.describe("Onboarding flow", () => {
     const token = fakeIdToken({
       email: "paciente@lila.app",
       name: "Camila Paciente",
-      picture: "https://example.com/avatar.png",
+      picture: AVATAR_URL,
     });
 
     await page.route(`${API_URL}/lila/config`, (route) =>
@@ -243,6 +250,11 @@ test.describe("Onboarding flow", () => {
     await page.route(`${API_URL}/lila/conversations`, (route) =>
       fulfillJson(route, []),
     );
+    // Serve the picture locally: the real example.com URL 404s, and the Sidebar's onError
+    // swaps the <img> for initials — racing the assertions below (flaky in CI).
+    await page.route(AVATAR_URL, (route) =>
+      route.fulfill({ status: 200, contentType: "image/png", body: TINY_PNG }),
+    );
 
     await seedAuthToken(page, token);
     await page.goto(`${BASE_URL}/chat`);
@@ -250,7 +262,7 @@ test.describe("Onboarding flow", () => {
     await expect(page.getByTestId("account-avatar")).toBeVisible();
     await expect(page.getByTestId("account-avatar")).toHaveAttribute(
       "src",
-      "https://example.com/avatar.png",
+      AVATAR_URL,
     );
     // El nombre real solo se ve dentro del popover de cuenta (Sidebar es un rail de 72px
     // solo-ícono desde la migración a tokens KAN-30).
