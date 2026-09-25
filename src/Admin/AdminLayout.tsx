@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { useLocation } from "wouter";
 import {
+  BookOpen,
   ClipboardList,
   FileText,
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   type AdminNavTone,
   type AdminNavLink,
 } from "@/Admin/AdminNavItem";
+import { CONTENT_HOME_PATH, canSeeAdminSection } from "@/lib/adminRoles";
 
 const NAV_LINKS: AdminNavLink[] = [
   {
@@ -32,6 +34,12 @@ const NAV_LINKS: AdminNavLink[] = [
   },
   // Figma Gestión de Planes reuses the clipboard-list icon for Planes.
   { id: "plans", href: "/admin/plans", label: "Planes", icon: ClipboardList },
+  {
+    id: "content",
+    href: CONTENT_HOME_PATH,
+    label: "Contenido",
+    icon: BookOpen,
+  },
 ];
 
 interface AdminLayoutProps {
@@ -80,7 +88,11 @@ export default function AdminLayout({
   navTone = "default",
 }: AdminLayoutProps) {
   const [location] = useLocation();
+  const { roles } = useAuth();
   const { loggingOut, handleLogout } = useAdminLogout();
+  const visibleLinks = NAV_LINKS.filter(({ href }) =>
+    canSeeAdminSection(roles, href),
+  );
   const isActive = (href: string) => location.startsWith(href);
   const logoutLabel = loggingOut ? "Cerrando sesión..." : "Cerrar sesión";
 
@@ -96,7 +108,7 @@ export default function AdminLayout({
         <div className="sticky top-0 flex h-screen flex-col gap-8 py-8">
           <Wordmark />
           <nav aria-label="Administración" className="flex flex-col">
-            {NAV_LINKS.map((link) => (
+            {visibleLinks.map((link) => (
               <AdminNavItem
                 key={link.id}
                 link={link}
@@ -149,7 +161,7 @@ export default function AdminLayout({
         className="fixed inset-x-0 bottom-0 z-20 flex bg-nav-background pb-[env(safe-area-inset-bottom)] md:hidden"
         data-testid="admin-tab-bar"
       >
-        {NAV_LINKS.map((link) => (
+        {visibleLinks.map((link) => (
           <AdminTabItem
             key={link.id}
             link={link}

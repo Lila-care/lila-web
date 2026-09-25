@@ -10,6 +10,8 @@ import ChangePassword from "./Admin/ChangePassword";
 import AuthCallback from "./Admin/AuthCallback";
 import FormsPage from "./Admin/FormsPage";
 import PlansPage from "./Admin/PlansPage";
+import ContentPage from "./Admin/ContentPage";
+import ArticleDetailPage from "./Admin/ArticleDetailPage";
 import ChatPage from "./Chat/ChatPage";
 import UserLogin from "./UserLogin";
 import ProtectedRoute from "./auth/ProtectedRoute";
@@ -64,6 +66,22 @@ const App = () => {
           component={() => (
             <ProtectedRoute>
               <PlansPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/admin/content/:id"
+          component={() => (
+            <ProtectedRoute allowMedicalReviewer>
+              <ArticleDetailPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/admin/content"
+          component={() => (
+            <ProtectedRoute allowMedicalReviewer>
+              <ContentPage />
             </ProtectedRoute>
           )}
         />
