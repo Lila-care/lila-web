@@ -7,6 +7,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import { useLocation } from "wouter";
+import { readRolesFromIdToken } from "@/lib/adminRoles";
 
 const TOKEN_KEY = "lila_id_token";
 const ACCESS_TOKEN_KEY = "lila_access_token";
@@ -30,6 +31,8 @@ interface AuthContextValue {
   email: string | null;
   name: string | null;
   picture: string | null;
+  // Cognito groups from the ID token (`cognito:groups`), e.g. "admin", "medical_reviewer".
+  roles: string[];
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (tokens: LoginTokens) => void;
@@ -44,6 +47,7 @@ const AuthContext = createContext<AuthContextValue>({
   email: null,
   name: null,
   picture: null,
+  roles: [],
   isAuthenticated: false,
   isLoading: true,
   login: () => {},
@@ -82,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
   const [picture, setPicture] = useState<string | null>(null);
+  const [roles, setRoles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [, navigate] = useLocation();
 
@@ -94,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // login) — fall back to `given_name` so we still show something other than the email.
     setName(payload?.name ?? payload?.given_name ?? null);
     setPicture(payload?.picture ?? null);
+    setRoles(readRolesFromIdToken(stored));
   };
 
   const clearAuthStorage = () => {
@@ -157,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setEmail(null);
     setName(null);
     setPicture(null);
+    setRoles([]);
     navigate("/chat");
   };
 
@@ -170,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         name,
         picture,
+        roles,
         isAuthenticated: !!token,
         isLoading,
         login,
