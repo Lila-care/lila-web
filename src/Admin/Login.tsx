@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import selloLila from "/sello_vinotinto.svg";
 import { loginWithPassword, LoginDto, AuthTokens } from "@/api/lila";
 import { useAuth } from "@/auth/AuthContext";
+import { adminHomePath, readRolesFromIdToken } from "@/lib/adminRoles";
 
 const handleGoogleLogin = () => {
   const domain = import.meta.env.VITE_AUTH_DOMAIN;
@@ -62,8 +63,9 @@ function Login() {
         });
         return;
       }
-      login(result as AuthTokens);
-      navigate("/admin/dashboard");
+      const tokens = result as AuthTokens;
+      login(tokens);
+      navigate(adminHomePath(readRolesFromIdToken(tokens.idToken)));
     } catch {
       setError("Credenciales inválidas. Verifica tu correo y contraseña.");
     } finally {

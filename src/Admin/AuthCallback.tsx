@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/auth/AuthContext";
 import { migrateGuest } from "@/api/lila";
 import { readExistingGuestId, clearGuestId } from "@/lib/guest";
+import { adminHomePath, readRolesFromIdToken } from "@/lib/adminRoles";
 
 function AuthCallback() {
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +118,13 @@ function AuthCallback() {
               clearGuestId();
             }
           }
-          navigate("/chat");
+          // Admin-panel logins (Google from /admin) land on the panel home for their role — a
+          // medical reviewer has nothing to do in the consumer chat.
+          navigate(
+            loginOriginRef.current === "/admin"
+              ? adminHomePath(readRolesFromIdToken(data.id_token))
+              : "/chat",
+          );
         },
       )
       .catch((err: Error) => {
