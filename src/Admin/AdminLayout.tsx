@@ -1,26 +1,48 @@
-// src/layouts/AdminLayout.tsx
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useState } from "react";
 import { useLocation } from "wouter";
-import { Bell, User, LogOut } from "lucide-react";
+import {
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Users,
+} from "lucide-react";
 import { useAuth } from "@/auth/AuthContext";
+import {
+  AdminNavItem,
+  AdminTabItem,
+  type AdminNavTone,
+  type AdminNavLink,
+} from "@/Admin/AdminNavItem";
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+const NAV_LINKS: AdminNavLink[] = [
+  {
+    id: "dashboard",
+    href: "/admin/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+  },
+  { id: "users", href: "/admin/users", label: "Usuarias", icon: Users },
+  { id: "reports", href: "/admin/reports", label: "Reportes", icon: FileText },
+  {
+    id: "forms",
+    href: "/admin/forms",
+    label: "Formularios",
+    icon: ClipboardList,
+  },
+];
+
+interface AdminLayoutProps {
+  children: ReactNode;
+  // "neutral" drops the teal active mark — Figma error state (314:1172) keeps the nav quiet
+  // while the page reports a failure.
+  navTone?: AdminNavTone;
+}
+
+function useAdminLogout() {
   const { logout } = useAuth();
   const [, navigate] = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -31,72 +53,109 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       navigate("/admin");
     } finally {
       setLoggingOut(false);
-      setMenuOpen(false);
     }
   };
 
+  return { loggingOut, handleLogout };
+}
+
+// Sidebar: "Lila Admin" on one baseline. Rail (80px): no room for "Admin", just "Lila".
+function Wordmark() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* TOP NAVBAR */}
-      <header className="bg-primary border-b h-16 flex items-center px-6 justify-between shadow-sm">
-        {/* Logo */}
-        <div className="text-xl font-bold text-white">Lila Admin</div>
+    <div className="flex items-baseline justify-center gap-2 lg:justify-start lg:px-6">
+      <span className="type-h4-strong text-text-on-brand">Lila</span>
+      <span className="type-caption hidden text-surface-brand-light lg:inline">
+        Admin
+      </span>
+    </div>
+  );
+}
 
-        {/* Navigation */}
-        <nav className="flex gap-6">
-          <a href="/admin/dashboard" className="hover:text-accent text-white">
-            Dashboard
-          </a>
-          <a href="/admin/users" className="hover:text-accent text-white">
-            Users
-          </a>
-          <a href="/admin/reports" className="hover:text-accent text-white">
-            Reports
-          </a>
-          <a href="/admin/forms" className="hover:text-accent text-white">
-            Forms
-          </a>
-        </nav>
+// Three shells from one layout, per Figma 304:9: ≥lg sidebar 220px, md rail 80px (icon over
+// label), <md bottom tab bar. Applies to every admin page.
+export default function AdminLayout({
+  children,
+  navTone = "default",
+}: AdminLayoutProps) {
+  const [location] = useLocation();
+  const { loggingOut, handleLogout } = useAdminLogout();
+  const isActive = (href: string) => location.startsWith(href);
+  const logoutLabel = loggingOut ? "Cerrando sesión..." : "Cerrar sesión";
 
-        {/* Icons Right */}
-        <div className="flex items-center gap-4">
-          <Bell className="w-5 h-5 text-white cursor-pointer" />
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className="flex items-center justify-center cursor-pointer"
-              data-testid="user-menu-trigger"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-            >
-              <User className="w-6 h-6 text-white" />
-            </button>
-            {menuOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 mt-2 w-48 rounded-lg bg-white shadow-lg border border-gray-200 py-1 z-50"
-                data-testid="user-menu"
-              >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition disabled:opacity-50"
-                  data-testid="logout-button"
-                >
-                  <LogOut className="w-4 h-4" />
-                  {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
-                </button>
-              </div>
-            )}
-          </div>
+  return (
+    <div className="flex min-h-screen w-full bg-surface-warm">
+      {/* The <aside> stretches with the page so its background always covers the full height;
+          the inner column is what sticks to the viewport while scrolling. No z-index needed:
+          nothing in it overlays page content. */}
+      <aside
+        className="hidden min-h-screen shrink-0 self-stretch bg-nav-background md:block md:w-20 lg:w-55"
+        data-testid="admin-sidebar"
+      >
+        <div className="sticky top-0 flex h-screen flex-col gap-8 py-8">
+          <Wordmark />
+          <nav aria-label="Administración" className="flex flex-col">
+            {NAV_LINKS.map((link) => (
+              <AdminNavItem
+                key={link.id}
+                link={link}
+                active={isActive(link.href)}
+                tone={navTone}
+              />
+            ))}
+          </nav>
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            aria-label={logoutLabel}
+            className="flex h-16 flex-col items-center justify-center gap-1 disabled:opacity-60 lg:h-10 lg:flex-row lg:justify-start lg:gap-3 lg:pl-6"
+            data-testid="logout-button"
+          >
+            <LogOut className="size-5 shrink-0 text-teal-500" aria-hidden="true" />
+            <span className="type-caption text-surface-brand-light lg:hidden">
+              Salir
+            </span>
+            <span className="type-body-md hidden text-surface-brand-light lg:inline">
+              {logoutLabel}
+            </span>
+          </button>
         </div>
-      </header>
+      </aside>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 p-0">{children}</main>
+      {/* `min-w-0` — flex item; without it a wide child (table) refuses to shrink and pushes
+          the page past the viewport. Below md the bottom padding clears the fixed tab bar
+          (64px + iOS safe area) so it never covers the last row. */}
+      <main className="flex min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+        <div className="min-w-0 flex-1">{children}</div>
+        {/* Figma 375 has no top bar: logout is a text link at the end of the content. */}
+        <div className="mx-4 border-t border-border-default py-4 md:hidden">
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="type-body-md text-text-secondary underline-offset-2 hover:underline disabled:opacity-60"
+            data-testid="logout-button-mobile"
+          >
+            {logoutLabel}
+          </button>
+        </div>
+      </main>
+
+      <nav
+        aria-label="Administración"
+        className="fixed inset-x-0 bottom-0 z-20 flex bg-nav-background pb-[env(safe-area-inset-bottom)] md:hidden"
+        data-testid="admin-tab-bar"
+      >
+        {NAV_LINKS.map((link) => (
+          <AdminTabItem
+            key={link.id}
+            link={link}
+            active={isActive(link.href)}
+            tone={navTone}
+          />
+        ))}
+      </nav>
     </div>
   );
 }
