@@ -5,6 +5,7 @@ import {
   useState,
   ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 import { useLocation } from "wouter";
 
 const TOKEN_KEY = "lila_id_token";
@@ -117,15 +118,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Called by the login/callback/change-password screens right after they persist a fresh
   // token — AuthProvider lives above the router and never remounts on SPA navigation, so
   // without this the context would keep showing the pre-login (Guest) state until a full reload.
+  //
+  // Flushed synchronously: every caller navigates right after, and wouter's navigate
+  // re-renders synchronously (useSyncExternalStore) ahead of these batched updates — without
+  // the flush, ProtectedRoute renders the new route with no token and bounces back to /admin.
   const login = (tokens: LoginTokens) => {
     const expiresAt = Date.now() + tokens.expiresIn * 1000;
     localStorage.setItem(TOKEN_KEY, tokens.idToken);
     localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
     localStorage.setItem(EXPIRES_AT_KEY, String(expiresAt));
-    applyToken(tokens.idToken);
-    setAccessToken(tokens.accessToken);
-    setRefreshToken(tokens.refreshToken);
+    flushSync(() => {
+      applyToken(tokens.idToken);
+      setAccessToken(tokens.accessToken);
+      setRefreshToken(tokens.refreshToken);
+    });
   };
 
   const logout = async () => {
