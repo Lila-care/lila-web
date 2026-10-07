@@ -13,6 +13,8 @@ interface SidePanelProps {
   // the empty-state "Crear plan" button, replaced by the first row). Must be focusable
   // (tabIndex={-1} on a heading is enough).
   fallbackFocusId: string;
+  // Element to focus on open instead of the first field (e.g. a deep-linked feature row).
+  initialFocusSelector?: string;
   children: ReactNode;
   testId: string;
 }
@@ -28,6 +30,7 @@ export function SidePanel({
   titleId,
   onRequestClose,
   fallbackFocusId,
+  initialFocusSelector,
   children,
   testId,
 }: SidePanelProps) {
@@ -56,7 +59,12 @@ export function SidePanel({
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             const content = event.currentTarget as HTMLElement;
-            content.querySelector<HTMLElement>(FIRST_CONTROL)?.focus();
+            const target =
+              (initialFocusSelector &&
+                content.querySelector<HTMLElement>(initialFocusSelector)) ||
+              content.querySelector<HTMLElement>(FIRST_CONTROL);
+            target?.focus();
+            if (initialFocusSelector) target?.scrollIntoView?.({ block: "center" });
           }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();

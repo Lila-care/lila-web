@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { FeatureDefinition } from "@/api/plans";
 import { usePlans } from "@/Admin/usePlans";
 import { useSubscribers } from "@/Admin/useSubscribers";
 import { PlansLedger } from "@/Admin/PlansLedger";
@@ -11,7 +12,7 @@ import { LedgerEmptyState } from "@/Admin/ledger/LedgerEmptyState";
 import { LedgerButton } from "@/Admin/ledger/LedgerButton";
 import { tabId, tabPanelId } from "@/Admin/ledger/tabIds";
 
-export type PlansTabKey = "plans" | "discounts" | "subscribers";
+export type PlansTabKey = "plans" | "discounts" | "subscribers" | "features";
 
 interface TabSectionProps {
   tab: PlansTabKey;
@@ -65,11 +66,18 @@ function TabSection({
 
 interface PlansTabProps {
   plans: ReturnType<typeof usePlans>;
+  // Catalog for the "Características" summary; empty until it loads (summary degrades).
+  features: FeatureDefinition[];
   onCreate: () => void;
   onEdit: (planId: string) => void;
 }
 
-export function PlansTab({ plans, onCreate, onEdit }: PlansTabProps) {
+export function PlansTab({
+  plans,
+  features,
+  onCreate,
+  onEdit,
+}: PlansTabProps) {
   return (
     <TabSection
       tab="plans"
@@ -92,7 +100,14 @@ export function PlansTab({ plans, onCreate, onEdit }: PlansTabProps) {
         />
       }
     >
-      <PlansLedger rows={plans.rows} onEdit={onEdit} />
+      <PlansLedger rows={plans.rows} features={features} onEdit={onEdit} />
+      <p
+        className="type-body-sm mt-4 text-text-secondary"
+        data-testid="plans-ledger-footnote"
+      >
+        El detalle completo está en Características y en Editar plan. Los
+        valores no configurados heredan el catálogo.
+      </p>
     </TabSection>
   );
 }

@@ -5,12 +5,15 @@
 export class ApiError extends Error {
   readonly status: number;
   readonly messages: string[];
+  // The BE's `errors: string[]` on a 400 (per-field validation details), when present.
+  readonly details: string[];
 
-  constructor(status: number, messages: string[]) {
+  constructor(status: number, messages: string[], details: string[] = []) {
     super(messages.join("; ") || `HTTP ${status}`);
     this.name = "ApiError";
     this.status = status;
     this.messages = messages;
+    this.details = details;
   }
 }
 
@@ -24,10 +27,18 @@ function extractMessages(body: unknown): string[] {
   return [];
 }
 
+function extractDetails(body: unknown): string[] {
+  if (!body || typeof body !== "object" || !("errors" in body)) return [];
+  const { errors } = body as { errors: unknown };
+  return Array.isArray(errors)
+    ? errors.filter((e): e is string => typeof e === "string")
+    : [];
+}
+
 export async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body: unknown = await res.json().catch(() => null);
-    throw new ApiError(res.status, extractMessages(body));
+    throw new ApiError(res.status, extractMessages(body), extractDetails(body));
   }
   return res.json() as Promise<T>;
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/auth/AuthContext";
 import {
   CreatePlanPayload,
+  FeatureDefinition,
   PlanDto,
   UpdatePlanPayload,
   createPlan,
@@ -16,6 +17,7 @@ export interface PlanRow extends PlanDto {
   promo: PlanPromo | null;
 }
 
+const NO_FEATURES: FeatureDefinition[] = [];
 const LOAD_ERROR = "Intentá de nuevo en unos segundos.";
 
 // Loads the plan catalog together with the promo each plan currently carries (an active
@@ -25,7 +27,7 @@ const LOAD_ERROR = "Intentá de nuevo en unos segundos.";
 //
 // `loading` is only the first load: later refetches set `refreshing` and keep the current rows
 // mounted, so the "Editar" button that opened a panel is still there to take focus back.
-export function usePlans() {
+export function usePlans(features: FeatureDefinition[] = NO_FEATURES) {
   const { token } = useAuth();
   const [plans, setPlans] = useState<PlanDto[]>([]);
   const [rows, setRows] = useState<PlanRow[]>([]);
@@ -85,13 +87,13 @@ export function usePlans() {
         await load();
         return saved;
       } catch (e) {
-        setSaveError(toPlansErrorMessage(e, fallback));
+        setSaveError(toPlansErrorMessage(e, fallback, features));
         return null;
       } finally {
         setSaving(false);
       }
     },
-    [load],
+    [load, features],
   );
 
   const create = useCallback(

@@ -5,7 +5,36 @@ const BASE_URL = import.meta.env.VITE_API_URL;
 
 // --- Types (mirror the ms-lila PlanDto / create / patch contract exactly) ---
 
-export type PlanStatus = "active" | "inactive";
+export type PlanStatus = "active" | "inactive" | "coming_soon";
+
+// A resolved entitlement: flag = boolean; limit = integer quota, `null` = unlimited, `0` = blocked.
+export type EntitlementValue = boolean | number | null;
+
+export type EntitlementMap = Record<string, EntitlementValue>;
+
+export type FeatureSection = "chat" | "learn" | "cycle";
+
+export type FeatureType = "flag" | "limit";
+
+export type FeatureUnit =
+  | "per_day"
+  | "per_month"
+  | "days"
+  | "cycles"
+  | "profiles";
+
+// One row of GET /admin/subscription/features. `enforced: false` = announced ("Próximamente"):
+// the BE answers 400 if a value is sent for it.
+export interface FeatureDefinition {
+  key: string;
+  label: string;
+  description: string;
+  section: FeatureSection;
+  type: FeatureType;
+  unit?: FeatureUnit;
+  default: boolean | number | null;
+  enforced: boolean;
+}
 
 export interface PlanDto {
   planId: string;
@@ -16,7 +45,12 @@ export interface PlanDto {
   intervalDays: number | null;
   status: PlanStatus;
   description?: string;
-  // null = unlimited daily interactions.
+  features: string[];
+  promoAmountInCents?: number | null;
+  promoEndsAt?: string | null;
+  // Complete map, defaults already resolved by the BE.
+  entitlements: EntitlementMap;
+  // Deprecated mirror of entitlements.daily_chat_messages (null = unlimited).
   maxInteractionsPerDay: number | null;
 }
 
@@ -26,7 +60,7 @@ export interface CreatePlanPayload {
   currency: "COP";
   intervalDays?: number | null;
   description?: string;
-  maxInteractionsPerDay?: number | null;
+  entitlements?: EntitlementMap;
 }
 
 export interface UpdatePlanPayload {
@@ -35,7 +69,8 @@ export interface UpdatePlanPayload {
   intervalDays?: number | null;
   status?: PlanStatus;
   description?: string;
-  maxInteractionsPerDay?: number | null;
+  // Partial merge by key: send only the keys that changed.
+  entitlements?: EntitlementMap;
 }
 
 // --- API functions ---
@@ -77,4 +112,15 @@ export async function updatePlan(
     },
   );
   return handleResponse<PlanDto>(res);
+}
+
+export async function fetchPlanFeatures(
+  token: string,
+  signal?: AbortSignal,
+): Promise<FeatureDefinition[]> {
+  const res = await authFetch(`${BASE_URL}/admin/subscription/features`, {
+    headers: jsonAuthHeaders(token),
+    signal,
+  });
+  return handleResponse<FeatureDefinition[]>(res);
 }

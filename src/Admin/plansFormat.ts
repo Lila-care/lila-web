@@ -1,7 +1,13 @@
 import { formatCurrency } from "@/Admin/dashboardFormat";
 import { formatBogotaDayMonth } from "@/Admin/bogotaDate";
 import { DiscountDto } from "@/api/discounts";
-import { PlanDto, PlanStatus } from "@/api/plans";
+import {
+  EntitlementValue,
+  FeatureDefinition,
+  PlanDto,
+  PlanStatus,
+} from "@/api/plans";
+import { isDefaultValue, planValue } from "@/Admin/plans/matrixFormat";
 import { SubscriberSource, SubscriberStatus } from "@/api/subscribers";
 
 function pluralize(count: number, singular: string, plural: string): string {
@@ -20,8 +26,66 @@ export function formatDailyLimit(maxInteractionsPerDay: number | null): string {
     : `${maxInteractionsPerDay} mensajes / día`;
 }
 
+const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
+  active: "Activo",
+  inactive: "Inactivo",
+  coming_soon: "Próximamente",
+};
+
 export function formatPlanStatus(status: PlanStatus): string {
-  return status === "active" ? "Activo" : "Inactivo";
+  return PLAN_STATUS_LABEL[status];
+}
+
+// Daily chat quota of a plan: the entitlement, or its deprecated `maxInteractionsPerDay` mirror
+// when the map doesn't carry it. `null` = unlimited.
+export function resolveDailyChatLimit(plan: PlanDto): number | null {
+  const value: EntitlementValue | undefined =
+    plan.entitlements?.daily_chat_messages;
+  return typeof value === "number" || value === null
+    ? value
+    : plan.maxInteractionsPerDay;
+}
+
+// --- "Características" cell of the Planes ledger (two lines, Figma A) ---
+
+const LEARN_ACCESS_KEY = "learn_access";
+const LEARN_QUOTA_KEY = "learn_articles_per_month";
+
+function formatLearnAccess(
+  entitlements: PlanDto["entitlements"],
+): string | null {
+  const access = entitlements[LEARN_ACCESS_KEY];
+  const quota = entitlements[LEARN_QUOTA_KEY];
+  if (access === false || quota === 0) return "Sin Aprende";
+  if (quota === null) return "Aprende ilimitado";
+  return typeof quota === "number" ? `Aprende ${quota}/mes` : null;
+}
+
+// The Aprende features (access + monthly quota) are both at their catalog default
+// (resolved value === default) — what "Por defecto" next to the Aprende text means.
+function usesLearnDefaults(
+  plan: PlanDto,
+  catalog: FeatureDefinition[],
+): boolean {
+  return catalog
+    .filter((f) => f.key === LEARN_ACCESS_KEY || f.key === LEARN_QUOTA_KEY)
+    .every((f) => isDefaultValue(f, planValue(plan, f)));
+}
+
+// ["5 mensajes / día", "Aprende ilimitado · Por defecto"]. Without the catalog (still loading
+// or failed) only the daily chat limit line is returned.
+export function formatEntitlementLines(
+  plan: PlanDto,
+  catalog: FeatureDefinition[] = [],
+): string[] {
+  const lines = [formatDailyLimit(resolveDailyChatLimit(plan))];
+  if (catalog.length === 0 || !plan.entitlements) return lines;
+  const origin = usesLearnDefaults(plan, catalog)
+    ? "Por defecto"
+    : "Personalizado";
+  const learn = formatLearnAccess(plan.entitlements);
+  lines.push(learn ? `${learn} · ${origin}` : origin);
+  return lines;
 }
 
 export interface PlanPromo {
@@ -180,9 +244,8 @@ export function summarizePlan(plan: PlanDto, promo: PlanPromo | null): string {
       ? "Sin ciclo"
       : formatBillingCycle(plan.intervalDays),
   ];
-  if (plan.maxInteractionsPerDay !== null) {
-    parts.push(`${plan.maxInteractionsPerDay} msj/día`);
-  }
+  const dailyLimit = resolveDailyChatLimit(plan);
+  if (dailyLimit !== null) parts.push(`${dailyLimit} msj/día`);
   return parts.join(" · ");
 }
 

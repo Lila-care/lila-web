@@ -2,10 +2,11 @@ import { formatCurrency } from "@/Admin/dashboardFormat";
 import {
   describePromo,
   formatBillingCycle,
-  formatDailyLimit,
+  formatEntitlementLines,
   formatPlanStatus,
   summarizePlan,
 } from "@/Admin/plansFormat";
+import { FeatureDefinition } from "@/api/plans";
 import { PlanRow } from "@/Admin/usePlans";
 import { LedgerHeader } from "@/Admin/ledger/LedgerHeader";
 import { PLANS_LEDGER_COLUMNS } from "@/Admin/ledger/ledgerColumns";
@@ -53,10 +54,11 @@ function PlanStatus({ row }: { row: PlanRow }) {
 
 interface PlansLedgerProps {
   rows: PlanRow[];
+  features: FeatureDefinition[];
   onEdit: (planId: string) => void;
 }
 
-export function PlansLedger({ rows, onEdit }: PlansLedgerProps) {
+export function PlansLedger({ rows, features, onEdit }: PlansLedgerProps) {
   return (
     <div className="min-w-0">
       <LedgerHeader
@@ -65,7 +67,7 @@ export function PlansLedger({ rows, onEdit }: PlansLedgerProps) {
         <span>Plan</span>
         <span>Precio</span>
         <span>Ciclo</span>
-        <span>Límite diario</span>
+        <span>Características</span>
         <span>Estado</span>
         <span className="text-right">Acciones</span>
       </LedgerHeader>
@@ -91,8 +93,13 @@ export function PlansLedger({ rows, onEdit }: PlansLedgerProps) {
                 <span className="type-body-sm text-text-secondary">
                   {formatBillingCycle(row.intervalDays)}
                 </span>
-                <span className="type-body-sm text-text-secondary">
-                  {formatDailyLimit(row.maxInteractionsPerDay)}
+                <span
+                  className="type-body-sm flex min-w-0 flex-col break-words text-text-secondary"
+                  data-testid={`plan-features-${row.planId}`}
+                >
+                  {formatEntitlementLines(row, features).map((line) => (
+                    <span key={line}>{line}</span>
+                  ))}
                 </span>
                 <PlanStatus row={row} />
                 <span className="text-right">
