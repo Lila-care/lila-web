@@ -13,7 +13,7 @@ export const RECENT_USERS_COLUMNS =
 
 // Gestión de Planes (Figma, 1116px content at 1440): stacked list below `lg`; from `lg` the
 // Figma column widths become fr ratios so the ledger scales down to 1280/1024 instead of
-// overflowing. Plan 260 | Precio 170 | Ciclo 170 | Límite diario 180 | Estado 140 | Acciones 196.
+// overflowing. Plan 260 | Precio 170 | Ciclo 170 | Características 180 | Estado 140 | Acciones 196.
 export const PLANS_LEDGER_COLUMNS =
   "lg:grid-cols-[minmax(0,260fr)_minmax(0,170fr)_minmax(0,170fr)_minmax(0,180fr)_minmax(0,140fr)_minmax(0,196fr)]";
 

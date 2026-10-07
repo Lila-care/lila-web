@@ -1,4 +1,5 @@
 import { ApiError } from "@/api/http";
+import { FeatureDefinition } from "@/api/plans";
 import { formatCurrency } from "@/Admin/dashboardFormat";
 
 // Mirrors WOMPI_MIN_AMOUNT_IN_CENTS in ms-lila src/subscription/discount.service.ts.
@@ -58,13 +59,49 @@ const RULES: ErrorCopyRule[] = [
   },
 ];
 
+const FEATURES_FALLBACK = "Revisa los valores de las características.";
+
+// Labels of the catalog features whose key appears in the BE's `errors[]` details.
+function labelsInDetails(
+  details: string[],
+  catalog: FeatureDefinition[],
+): string[] {
+  const text = details.join(" ");
+  const labels = catalog.filter((f) => text.includes(f.key)).map((f) => f.label);
+  return [...new Set(labels)];
+}
+
+// Entitlement validation (400 { message, errors[] }): the BE text is English and technical, so
+// it only goes to the console; the admin gets the offending characteristic when it can be
+// identified, else a generic line.
+function describeFeatureErrors(
+  details: string[],
+  catalog: FeatureDefinition[],
+): string {
+  console.warn("Plan features validation errors:", details);
+  const labels = labelsInDetails(details, catalog);
+  if (labels.length === 0) return FEATURES_FALLBACK;
+  const quoted = labels.map((label) => `«${label}»`).join(", ");
+  return labels.length === 1
+    ? `Revisa el valor de ${quoted}: no es válido para este plan.`
+    : `Revisa los valores de ${quoted}: no son válidos para este plan.`;
+}
+
 // Spanish copy for any error thrown by the plans/discounts/subscribers API calls. Anything
 // unrecognized (network failure, 5xx, an unmapped validation message) gets `fallback`.
-export function toPlansErrorMessage(error: unknown, fallback: string): string {
+// `catalog` lets 400s about plan characteristics name the one that failed.
+export function toPlansErrorMessage(
+  error: unknown,
+  fallback: string,
+  catalog: FeatureDefinition[] = [],
+): string {
   if (!(error instanceof ApiError)) return fallback;
   for (const message of error.messages.map((m) => m.toLowerCase())) {
     const rule = RULES.find((r) => r.matches(error, message));
     if (rule) return rule.copy;
+  }
+  if (error.status === 400 && error.details.length > 0) {
+    return describeFeatureErrors(error.details, catalog);
   }
   const statusOnly = RULES.find((r) => r.matches(error, ""));
   return statusOnly?.copy ?? fallback;

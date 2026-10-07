@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
+import { FEATURE_CATALOG } from "./support/planEntitlementsMocks";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173";
 const API_URL = process.env.VITE_API_URL ?? "http://localhost:6100";
@@ -39,6 +40,8 @@ interface PlanFixture {
   intervalDays: number | null;
   status: "active" | "inactive";
   description?: string;
+  features: string[];
+  entitlements: Record<string, boolean | number | null>;
   maxInteractionsPerDay: number | null;
 }
 
@@ -73,6 +76,8 @@ function buildPlan(overrides: Partial<PlanFixture> = {}): PlanFixture {
     currency: "COP",
     intervalDays: 30,
     status: "active",
+    features: [],
+    entitlements: { daily_chat_messages: 20 },
     maxInteractionsPerDay: 20,
     ...overrides,
   };
@@ -145,6 +150,9 @@ function mockPlansApi(page: Page, initial: MockOptions = {}) {
       });
     }
 
+    if (path === "/admin/subscription/features") {
+      return fulfillJson(route, FEATURE_CATALOG);
+    }
     if (path === "/admin/subscription/plans" && method === "GET") {
       if (initial.failPlans) {
         return fulfillJson(route, { message: "boom" }, 500);
@@ -162,7 +170,9 @@ function mockPlansApi(page: Page, initial: MockOptions = {}) {
         intervalDays: body.intervalDays ?? null,
         status: "active",
         description: body.description,
-        maxInteractionsPerDay: body.maxInteractionsPerDay ?? null,
+        features: [],
+        entitlements: { daily_chat_messages: 5, ...(body.entitlements ?? {}) },
+        maxInteractionsPerDay: body.entitlements?.daily_chat_messages ?? 5,
       };
       plans.push(created);
       return fulfillJson(route, created, 201);
@@ -171,7 +181,12 @@ function mockPlansApi(page: Page, initial: MockOptions = {}) {
     if (planMatch && method === "PATCH") {
       const idx = plans.findIndex((p) => p.planId === planMatch[1]);
       if (idx === -1) return fulfillJson(route, { message: "not found" }, 404);
-      plans[idx] = { ...plans[idx], ...route.request().postDataJSON() };
+      const patch = route.request().postDataJSON();
+      plans[idx] = {
+        ...plans[idx],
+        ...patch,
+        entitlements: { ...plans[idx].entitlements, ...patch.entitlements },
+      };
       return fulfillJson(route, plans[idx]);
     }
 
@@ -274,14 +289,18 @@ test.describe("Admin Plans — Planes", () => {
 
     await page.getByTestId("plan-name-input").fill("Plan Básico");
     await page.getByTestId("plan-amount-input").fill("19900");
-    await page.getByTestId("plan-max-interactions-input").fill("5");
+    await page.getByTestId("feature-customize-daily_chat_messages").click();
+    await page.getByTestId("feature-unlimited-daily_chat_messages").uncheck();
+    await page
+      .getByTestId("feature-limit-input-daily_chat_messages")
+      .fill("8");
     await page.getByTestId("plan-save-button").click();
 
     await expect(panel).toHaveCount(0);
     const row = page.getByTestId("plan-row-plan-1");
     await expect(row).toContainText("Plan Básico");
     await expect(row).toContainText("Sin ciclo de cobro");
-    await expect(row).toContainText("5 mensajes / día");
+    await expect(row).toContainText("8 mensajes / día");
     await expect(row).toContainText("Activo");
     await expect(page.getByTestId("plans-page-subtitle")).toHaveText(
       "1 plan · 1 activo",
@@ -670,6 +689,7 @@ test.describe("Admin Plans — navegación y responsive", () => {
           name: "Gratis",
           amountInCents: 0,
           intervalDays: null,
+          entitlements: { daily_chat_messages: 5 },
           maxInteractionsPerDay: 5,
         }),
       ],

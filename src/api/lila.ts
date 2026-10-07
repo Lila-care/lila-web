@@ -129,6 +129,8 @@ export interface UserAgent {
   // authenticated) with at least 1 message exchanged — lets the FE restore the real
   // conversation on reload instead of re-seeding the generic first-question greeting.
   activeConversation?: ActiveConversation;
+  // Effective entitlements of the user (resolved plan map). Not consumed by the web chat yet.
+  entitlements?: Record<string, boolean | number | null>;
 }
 
 export interface MigrateGuestResponse {
@@ -156,6 +158,41 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// POST /lila/chat 403 body. New codes: LIMIT_REACHED (daily_chat_messages) and
+// FEATURE_NOT_IN_PLAN (ai_reports); older BE versions only sent `upgradeRequired` and
+// `freeQuestionLimit`, so every field is optional.
+export interface ChatGateBody {
+  message?: string;
+  code?: "LIMIT_REACHED" | "FEATURE_NOT_IN_PLAN";
+  feature?: string;
+  limit?: number;
+  upgradeRequired?: boolean;
+  freeQuestionLimit?: number;
+}
+
+// Thrown by `sendMessage` on any non-2xx. Keeps the historical `HTTP <status>: <body>` message
+// and exposes the parsed gate fields so the chat can pick the right upgrade copy.
+export class ChatApiError extends Error {
+  readonly status: number;
+  readonly gate: ChatGateBody;
+
+  constructor(status: number, text: string, gate: ChatGateBody) {
+    super(`HTTP ${status}: ${text}`);
+    this.name = "ChatApiError";
+    this.status = status;
+    this.gate = gate;
+  }
+}
+
+function parseGateBody(text: string): ChatGateBody {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? (parsed as ChatGateBody) : {};
+  } catch {
+    return {};
+  }
+}
+
 // --- API functions ---
 
 export async function sendMessage(
@@ -178,7 +215,11 @@ export async function sendMessage(
           ? { ...jsonHeaders(), "x-guest-id": guestId }
           : jsonHeaders(),
       });
-  return handleResponse<ChatResponse>(res);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new ChatApiError(res.status, text, parseGateBody(text));
+  }
+  return res.json() as Promise<ChatResponse>;
 }
 
 export async function getConversations(

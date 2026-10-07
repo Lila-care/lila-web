@@ -111,6 +111,40 @@ No React Query/SWR — data fetching is done via hooks that hold their own `useS
   radius-lg) + `TextButton` (inline primary text action), `FormField` + `FIELD_CONTROL_CLASS`,
   `SidePanel`/`SidePanelFooter`. `ledger-tokens.css` gained `--overlay-scrim` and
   `type-h1`/`type-h2`/`type-h3`/`type-label-sm-strong`, all PENDING design-token-sync approval.
+- Características por plan (entitlements, Figma `Plan features` 797:8192): `GET /admin/subscription/features`
+  (catálogo de 11 keys: `key`, `label`, `description`, `section` chat|learn|cycle, `type` flag|limit, `unit`,
+  `default`, `enforced`) vía `fetchPlanFeatures` / `usePlanFeatures` (cargado una vez en `PlansPage`,
+  compartido por tabla, matriz y panel). `PlanDto.entitlements` es el mapa completo con defaults ya
+  resueltos; `maxInteractionsPerDay` es espejo deprecado y la UI ya no lo envía. Supuesto: "Por defecto"
+  = valor resuelto === `default` del catálogo (un override igual al default es indistinguible).
+  - Tab 4 "Características" (`plans/FeaturesTab`, `FeaturesMatrix`, `MatrixCell`): columnas = todos los
+    planes (inactivos marcados), filas = catálogo agrupado por sección + "Próximamente" (atenuado, no
+    interactivo). Celda → abre Editar plan con foco en esa fila (`SidePanel.initialFocusSelector`).
+    Con el tab activo el H1 pasa a "Características por plan".
+  - Panel Editar plan (`PlanPanel` + `plans/`): Nombre / Precio+Ciclo / Descripción / Estado (switch) y
+    sección "Características" (`EntitlementsSection`, `FeatureRow`, `LimitControl`, `ToggleSwitch`;
+    estado en `useEntitlementsDraft`, helpers puros en `entitlementsDraft.ts`). Filas en su default
+    quedan bloqueadas ("Por defecto" + "Personalizar"); cambiadas muestran "Modificado" + "Usar valor por
+    defecto". Límite: vacío o "Ilimitado" = `null`, `0` = bloqueado, entero > 0 = cupo; decimal/negativo
+    marcan la fila y bloquean Guardar. PATCH manda SOLO las keys modificadas; create las que difieren del
+    default. `enforced: false`: solo la etiqueta "Próximamente" (sin control). 400 `errors[]` → `ApiError.details`,
+    mostrado como "Revisa el valor de «<label>»…" (label del catálogo) o aviso genérico; el detalle crudo
+    solo va a `console.warn`. Un plan `coming_soon` muestra el estado como texto (switch deshabilitado).
+  - Tabla de planes: columna "Características" en 2 líneas (`formatEntitlementLines`: límite diario +
+    "Aprende … · Por defecto|Personalizado") y pie con la nota del diseño.
+  - "Confirmar cambio" (`plans/ConfirmChangeDialog`, `useSubscriberCount`): solo si el plan está activo,
+    el cambio REDUCE acceso (flag true→false, límite ilimitado→número, número menor, 0; ver
+    `entitlementsReductions.ts`) y `GET /admin/subscription/stats` (`byPlan[].activeCount`, solo
+    suscripciones `active`; past_due/canceled caen a Gratis) dice que hay suscriptoras. Sin `activeCount`
+    (BE viejo) la verificación falla y no se guarda. La lista del diálogo se congela al abrirlo (el
+    refetch tras guardar mueve el baseline). N se lee al guardar (el stats escanea tablas, no se carga con la página); si no se puede leer N no se
+    guarda. Sin reducción, plan inactivo o 0 suscriptoras: guarda directo. Estados saving/error/success.
+- Chat gates: `POST /lila/chat` 403 se parsea en `ChatApiError` (`api/lila.ts`); `Chat/upgradeGate.ts`
+  elige el modal por `code`/`feature` (`LIMIT_REACHED`+`daily_chat_messages`, `FEATURE_NOT_IN_PLAN`+
+  `ai_reports`; un 403 viejo con solo `upgradeRequired` abre el modal genérico; a invitadas cualquier gate
+  de plan (`LIMIT_REACHED`, `FEATURE_NOT_IN_PLAN`, legacy) las manda al login gate). `UpgradeGateModal` usa
+  Radix Dialog (foco en el CTA, trap, Esc). "Aprende" del consumer es estático (sin API): los `locked`/403 de `/learn/*` aplican a
+  `lila_client`, no a esta web.
 - `UsersTable.tsx`/`FormsTable.tsx` still build their own table manually with
   `@tanstack/react-table`.
 - `UsersPage.tsx`/`UsersTable.tsx`/`UserDetails.tsx` — paginated users list + detail. Tables use

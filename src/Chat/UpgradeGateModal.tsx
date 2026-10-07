@@ -1,67 +1,79 @@
+import { useRef } from 'react'
+import { Dialog } from 'radix-ui'
+import { describeUpgradeGate, type UpgradeGate } from './upgradeGate'
+
 interface UpgradeGateModalProps {
+  gate: UpgradeGate
   onClose: () => void
 }
 
-export default function UpgradeGateModal({ onClose }: UpgradeGateModalProps) {
+// Radix Dialog: focus trap, Esc and outside click close, focus starts on the main CTA.
+export default function UpgradeGateModal({ gate, onClose }: UpgradeGateModalProps) {
+  const copy = describeUpgradeGate(gate)
+  const primaryRef = useRef<HTMLButtonElement>(null)
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div
-        style={{
-          background: '#1a1a1a',
-          border: '1px solid #2e2e2e',
-          borderRadius: '24px',
-          fontFamily: "'Poppins', system-ui, sans-serif",
-        }}
-        className="w-full max-w-sm p-8 flex flex-col items-center text-center gap-5"
-      >
-        {/* Logo */}
-        <img src="/sello_vinotinto.svg" alt="Lila" className="w-16 h-16" />
+    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60" />
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4">
+          <Dialog.Content
+            aria-describedby="upgrade-gate-body"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              primaryRef.current?.focus()
+            }}
+            style={{
+              background: '#1a1a1a',
+              border: '1px solid #2e2e2e',
+              borderRadius: '24px',
+              fontFamily: "'Poppins', system-ui, sans-serif",
+            }}
+            data-testid="upgrade-gate-modal"
+            data-reason={gate.reason}
+            className="pointer-events-auto w-full max-w-sm p-8 flex flex-col items-center text-center gap-5 focus:outline-none"
+          >
+            <img src="/sello_vinotinto.svg" alt="Lila" className="w-16 h-16" />
 
-        {/* Title */}
-        <h2
-          className="text-xl font-bold leading-tight"
-          style={{ color: '#F8EAFE' }}
-        >
-          Has llegado a tu límite por ahora
-        </h2>
+            <Dialog.Title
+              className="text-xl font-bold leading-tight"
+              style={{ color: '#F8EAFE' }}
+            >
+              {copy.title}
+            </Dialog.Title>
 
-        {/* Subtitle */}
-        <p className="text-sm leading-relaxed" style={{ color: '#828282' }}>
-          Upgrade tu plan para seguir hablando con Lila sin límites, o vuelve mañana.
-        </p>
+            <p
+              id="upgrade-gate-body"
+              className="text-sm leading-relaxed"
+              style={{ color: '#828282' }}
+            >
+              {copy.body}
+            </p>
 
-        {/* Primary CTA */}
-        <button
-          onClick={onClose}
-          className="w-full py-3 rounded-xl text-sm font-semibold transition-colors duration-[180ms]"
-          style={{
-            background: '#7e3565',
-            color: '#F8EAFE',
-          }}
-          onMouseEnter={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.background = '#92407a'
-          }}
-          onMouseLeave={(e) => {
-            ;(e.currentTarget as HTMLButtonElement).style.background = '#7e3565'
-          }}
-        >
-          Mejorar mi plan
-        </button>
+            <button
+              ref={primaryRef}
+              onClick={onClose}
+              className="w-full py-3 rounded-xl text-sm font-semibold transition-colors duration-[180ms] focus-visible:ring-2 focus-visible:ring-[#F8EAFE] focus:outline-none"
+              style={{ background: '#7e3565', color: '#F8EAFE' }}
+              onMouseEnter={(e) => {
+                ;(e.currentTarget as HTMLButtonElement).style.background = '#92407a'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLButtonElement).style.background = '#7e3565'
+              }}
+            >
+              {copy.primary}
+            </button>
 
-        {/* Secondary link */}
-        <button
-          onClick={onClose}
-          className="text-sm underline transition-opacity hover:opacity-70"
-          style={{ color: '#828282' }}
-        >
-          Volver mañana
-        </button>
-      </div>
-    </div>
+            <button
+              onClick={onClose}
+              className="text-sm underline transition-opacity hover:opacity-70"
+              style={{ color: '#828282' }}
+            >
+              {copy.secondary}
+            </button>
+          </Dialog.Content>
+        </div>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }

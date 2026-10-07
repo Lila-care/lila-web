@@ -1,6 +1,8 @@
 import { useState } from "react";
 import AdminLayout from "@/Admin/AdminLayout";
+import { FeatureDefinition } from "@/api/plans";
 import { usePlans } from "@/Admin/usePlans";
+import { usePlanFeatures } from "@/Admin/usePlanFeatures";
 import { useDiscounts } from "@/Admin/useDiscounts";
 import { useSubscribers } from "@/Admin/useSubscribers";
 import {
@@ -9,6 +11,7 @@ import {
   describeSubscriberCount,
 } from "@/Admin/plansFormat";
 import { DiscountRow } from "@/Admin/DiscountsLedger";
+import { FeaturesTab } from "@/Admin/plans/FeaturesTab";
 import { PlanPanel } from "@/Admin/PlanPanel";
 import { DiscountPanel } from "@/Admin/DiscountPanel";
 import {
@@ -25,10 +28,14 @@ const TABS: LedgerTab<PlansTabKey>[] = [
   { id: "plans", label: "Planes" },
   { id: "discounts", label: "Descuentos" },
   { id: "subscribers", label: "Suscriptoras" },
+  { id: "features", label: "Características" },
 ];
 
 type PanelState =
-  { kind: "closed" } | { kind: "create" } | { kind: "edit"; id: string };
+  | { kind: "closed" }
+  | { kind: "create" }
+  // `featureKey` = the matrix cell that opened it; focus lands on that feature's row.
+  | { kind: "edit"; id: string; featureKey?: string };
 
 function usePanelState(onOpen: () => void) {
   const [panel, setPanel] = useState<PanelState>({ kind: "closed" });
@@ -38,9 +45,9 @@ function usePanelState(onOpen: () => void) {
       onOpen();
       setPanel({ kind: "create" });
     },
-    openEdit: (id: string) => {
+    openEdit: (id: string, featureKey?: string) => {
       onOpen();
-      setPanel({ kind: "edit", id });
+      setPanel({ kind: "edit", id, featureKey });
     },
     close: () => setPanel({ kind: "closed" }),
   };
@@ -65,11 +72,12 @@ interface HeaderAction {
 }
 
 interface PageHeaderProps {
+  title: string;
   subtitle: string | null;
   action: HeaderAction | null;
 }
 
-function PageHeader({ subtitle, action }: PageHeaderProps) {
+function PageHeader({ title, subtitle, action }: PageHeaderProps) {
   return (
     <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div className="flex min-w-0 flex-col gap-1">
@@ -78,7 +86,7 @@ function PageHeader({ subtitle, action }: PageHeaderProps) {
           tabIndex={-1}
           className="type-h2 md:type-h1 text-text-primary focus:outline-none"
         >
-          Gestión de Planes
+          {title}
         </h1>
         {subtitle && (
           <p
@@ -104,9 +112,9 @@ function PageHeader({ subtitle, action }: PageHeaderProps) {
 
 // Plans + discounts are small catalogs loaded on mount (the Descuentos tab needs plan names
 // and the Planes tab needs active discounts); the subscriber scan waits for its tab.
-function usePlansPageData() {
+function usePlansPageData(features: FeatureDefinition[]) {
   const [subscribersRequested, setSubscribersRequested] = useState(false);
-  const plans = usePlans();
+  const plans = usePlans(features);
   const discounts = useDiscounts();
   const subscribers = useSubscribers(subscribersRequested);
 
@@ -147,6 +155,9 @@ function usePlansPageData() {
 
 type PlansPageData = ReturnType<typeof usePlansPageData>;
 
+const FEATURES_SUBTITLE =
+  "Valores efectivos del catálogo. Una configuración para todas las suscriptoras de cada plan.";
+
 function headerSubtitle(tab: PlansTabKey, data: PlansPageData): string | null {
   const { plans, subscribers } = data;
   switch (tab) {
@@ -158,6 +169,8 @@ function headerSubtitle(tab: PlansTabKey, data: PlansPageData): string | null {
       return data.discountsLoading || data.discountsError
         ? null
         : describeDiscountCount(data.discounts.discounts);
+    case "features":
+      return FEATURES_SUBTITLE;
     case "subscribers":
       return subscribers.loading || subscribers.error
         ? null
@@ -170,7 +183,8 @@ function headerSubtitle(tab: PlansTabKey, data: PlansPageData): string | null {
 
 function PlansPage() {
   const [activeTab, setActiveTab] = useState<PlansTabKey>("plans");
-  const data = usePlansPageData();
+  const planFeatures = usePlanFeatures();
+  const data = usePlansPageData(planFeatures.features);
   const { plans, discounts } = data;
   const planPanel = usePanelState(plans.clearSaveError);
   const discountPanel = usePanelState(discounts.clearSaveError);
@@ -192,6 +206,7 @@ function PlansPage() {
       testId: "discounts-create-button",
     },
     subscribers: null,
+    features: null,
   };
   const action = actions[activeTab];
 
@@ -209,6 +224,11 @@ function PlansPage() {
         data-testid="plans-page"
       >
         <PageHeader
+          title={
+            activeTab === "features"
+              ? "Características por plan"
+              : "Gestión de Planes"
+          }
           subtitle={headerSubtitle(activeTab, data)}
           action={action}
         />
@@ -237,6 +257,7 @@ function PlansPage() {
           {activeTab === "plans" && (
             <PlansTab
               plans={plans}
+              features={planFeatures.features}
               onCreate={planPanel.openCreate}
               onEdit={planPanel.openEdit}
             />
@@ -254,14 +275,34 @@ function PlansPage() {
           {activeTab === "subscribers" && (
             <SubscribersTab subscribers={data.subscribers} />
           )}
+          {activeTab === "features" && (
+            <FeaturesTab
+              plans={plans.plans}
+              plansLoading={plans.loading}
+              plansError={plans.error}
+              catalog={planFeatures}
+              onRetry={() => {
+                plans.refetch();
+                planFeatures.refetch();
+              }}
+              onSelect={planPanel.openEdit}
+            />
+          )}
         </div>
       </div>
 
       {planEditor.open && (
         <PlanPanel
           plan={planEditor.entity}
+          catalog={planFeatures}
+          focusFeatureKey={
+            planPanel.panel.kind === "edit"
+              ? planPanel.panel.featureKey
+              : undefined
+          }
           saving={plans.saving}
           saveError={plans.saveError}
+          onClearSaveError={plans.clearSaveError}
           onCreate={plans.create}
           onUpdate={plans.update}
           onClose={planPanel.close}

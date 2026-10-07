@@ -9,6 +9,11 @@ import {
 } from "@/api/lila";
 import type { ChatMessage } from "@/api/lila";
 import { getGuestId } from "@/lib/guest";
+import {
+  GENERIC_UPGRADE_GATE,
+  resolveChatGate,
+  type UpgradeGate,
+} from "@/Chat/upgradeGate";
 
 const ANON_COUNT_KEY = "lila_anon_count";
 const USER_COUNT_KEY = "lila_user_count";
@@ -24,6 +29,8 @@ interface UseLilaChatReturn {
   userCount: number;
   showLoginGate: boolean;
   showUpgradeGate: boolean;
+  // Why the upgrade modal is open; null while it is closed.
+  upgradeGate: UpgradeGate | null;
   hasActiveTemplate: boolean;
   onboardingPending: boolean;
   // True until the mount-time `agent/me` check (which determines `onboardingPending`) has
@@ -56,7 +63,12 @@ export function useLilaChat(): UseLilaChatReturn {
     parseInt(localStorage.getItem(USER_COUNT_KEY) ?? "0", 10),
   );
   const [showLoginGate, setShowLoginGate] = useState(false);
-  const [showUpgradeGate, setShowUpgradeGate] = useState(false);
+  const [upgradeGate, setUpgradeGate] = useState<UpgradeGate | null>(null);
+  const showUpgradeGate = upgradeGate !== null;
+  const setShowUpgradeGate = useCallback(
+    (open: boolean) => setUpgradeGate(open ? GENERIC_UPGRADE_GATE : null),
+    [],
+  );
   const [hasActiveTemplate, setHasActiveTemplate] = useState(true);
   const [onboardingPending, setOnboardingPending] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
@@ -226,7 +238,7 @@ export function useLilaChat(): UseLilaChatReturn {
           localStorage.setItem(USER_COUNT_KEY, String(newCount));
           setUserCount(newCount);
           if (newCount >= upgradePromptLimit) {
-            setShowUpgradeGate(true);
+            setUpgradeGate(GENERIC_UPGRADE_GATE);
           }
         } else {
           // Increment anon count after successful response
@@ -236,9 +248,16 @@ export function useLilaChat(): UseLilaChatReturn {
           setAnonCount(newCount);
         }
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Error al enviar el mensaje",
-        );
+        // A plan gate (daily quota, feature not in plan) opens its modal instead of an inline
+        // error; every other failure keeps the historical message.
+        const gate = resolveChatGate(err, Boolean(token));
+        if (gate.kind === "upgrade") setUpgradeGate(gate.gate);
+        else if (gate.kind === "login") setShowLoginGate(true);
+        else {
+          setError(
+            err instanceof Error ? err.message : "Error al enviar el mensaje",
+          );
+        }
         // Remove optimistic user message on error
         setMessages((prev) => prev.filter((m) => m !== userMessage));
       } finally {
@@ -311,6 +330,7 @@ export function useLilaChat(): UseLilaChatReturn {
     userCount,
     showLoginGate,
     showUpgradeGate,
+    upgradeGate,
     hasActiveTemplate,
     onboardingPending,
     isCheckingOnboarding,
