@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/auth/AuthContext";
-import { DashboardUserListItemDto, fetchRecentUsers } from "@/api/users";
+import { DashboardUserListItemDto, fetchAttentionUsers } from "@/api/users";
 
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 5;
 
-export function useRecentUsers(limit: number = DEFAULT_LIMIT) {
+export function useAttentionUsers(limit: number = DEFAULT_LIMIT) {
   const { token } = useAuth();
   const [data, setData] = useState<DashboardUserListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,9 +14,9 @@ export function useRecentUsers(limit: number = DEFAULT_LIMIT) {
     if (!token) return;
     setLoading(true);
     setError(null);
-    fetchRecentUsers(token, limit)
+    fetchAttentionUsers(token, limit)
       .then(setData)
-      .catch(() => setError("No pudimos cargar las usuarias recientes."))
+      .catch(() => setError("No pudimos cargar las usuarias que requieren atención."))
       .finally(() => setLoading(false));
   }, [token, limit]);
 
