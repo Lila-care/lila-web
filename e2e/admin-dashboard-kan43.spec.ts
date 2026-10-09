@@ -49,7 +49,16 @@ function buildStats(overrides: Partial<Record<string, unknown>> = {}) {
     activeUsers: { total: 40 },
     cycleReports: { total: 18, byDay: byDay([6, 6, 6]) },
     conversations: { total: 30, byDay: byDay([10, 8, 12]) },
-    retention: { newUsersInRange: 12, returned: 6, rate: 0.5 },
+    retention: { newUsersInRange: 12, returned: 6, rate: 0.5, unconfirmedCount: 0 },
+    funnel: {
+      registered: 12,
+      confirmed: 10,
+      onboardingStarted: 8,
+      onboardingCompleted: 6,
+      firstCycleReport: 4,
+      firstConversation: 3,
+      activeSubscription: 1,
+    },
     subscriptions: {
       totalSubscribers: 84,
       byStatus: { active: 70, past_due: 9, canceled: 5 },
@@ -76,6 +85,14 @@ function recentUser(
   return {
     userId: "user-1",
     email: "usuaria@example.com",
+    createdAt: "2026-08-01T15:00:00.000Z",
+    accountStatus: "confirmed",
+    provider: "password",
+    stage: "onboarding_completed",
+    onboarding: null,
+    subscriptionStatus: "none",
+    checkoutAttempts: 0,
+    attentionReason: null,
     cycleReports: 3,
     conversations: 5,
     lastActivityAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
@@ -86,6 +103,10 @@ function recentUser(
 async function mockStats(page: Page, overrides = {}) {
   await page.route(`${API_URL}/admin/dashboard/stats*`, (route) =>
     fulfillJson(route, buildStats(overrides)),
+  );
+  // Dashboard v3 also fetches the attention list; covered in admin-users-visibility.spec.ts.
+  await page.route(`${API_URL}/admin/dashboard/users/attention*`, (route) =>
+    fulfillJson(route, []),
   );
 }
 
@@ -213,9 +234,7 @@ test.describe("Admin Dashboard — ingresos, tier y usuarias recientes (Ledger v
     await expect(rows.nth(1)).toContainText("ayer");
   });
 
-  test("Usuarias recientes — máximo 10 filas y ordenar por conversaciones", async ({
-    page,
-  }) => {
+  test("Usuarias recientes — máximo 8 filas", async ({ page }) => {
     await seedAuthToken(page);
     await mockStats(page);
     await mockRecentUsers(
@@ -232,11 +251,8 @@ test.describe("Admin Dashboard — ingresos, tier y usuarias recientes (Ledger v
     await page.goto(`${BASE_URL}/admin/dashboard`);
 
     const rows = page.getByTestId("recent-user-row");
-    await expect(rows).toHaveCount(10);
+    await expect(rows).toHaveCount(8);
     await expect(rows.first()).toContainText("u0@example.com");
-
-    await page.getByTestId("recent-users-sort-conversations").click();
-    await expect(rows.first()).toContainText("u9@example.com");
   });
 
   test("Usuarias recientes — estado vacío con mensaje explícito", async ({
@@ -296,12 +312,10 @@ test.describe("Admin Dashboard — ingresos, tier y usuarias recientes (Ledger v
     await page.goto(`${BASE_URL}/admin/dashboard`);
     await expect(page.getByTestId("recent-user-row")).toHaveCount(1);
 
-    // Sin controles de orden ni header de columnas a 375.
-    await expect(
-      page.getByTestId("recent-users-sort-conversations"),
-    ).toBeHidden();
+    // Sin header de columnas a 375; línea 2 = "N conv. · N reportes".
+    await expect(page.getByText("Conversaciones", { exact: true })).toBeHidden();
     await expect(page.getByTestId("recent-user-row")).toContainText(
-      "5 conversaciones · 3 reportes",
+      "5 conv. · 3 reportes",
     );
     // Fecha relativa en la primera línea, a la derecha del email.
     const recentRow = page.getByTestId("recent-user-row");
@@ -309,9 +323,9 @@ test.describe("Admin Dashboard — ingresos, tier y usuarias recientes (Ledger v
       .getByText("usuaria-con-un-email-bastante-largo@example.com")
       .boundingBox();
     const dateBox = await recentRow
-      .getByTestId("recent-user-last-activity")
+      .getByTestId("user-row-last-activity")
       .boundingBox();
-    const countsBox = await recentRow.getByText(/conversaciones/).boundingBox();
+    const countsBox = await recentRow.getByText(/conv\./).boundingBox();
     expect(emailBox && dateBox && countsBox).toBeTruthy();
     if (emailBox && dateBox && countsBox) {
       expect(dateBox.x).toBeGreaterThan(emailBox.x);

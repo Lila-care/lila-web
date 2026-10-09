@@ -68,7 +68,7 @@ No React Query/SWR — data fetching is done via hooks that hold their own `useS
   `TierSection.tsx`, `RecentUsersSection.tsx` (`GET /admin/dashboard/users/recent`, fetched once,
   no polling — each call scans full tables in ms-lila). Ledger primitives are LOCAL in
   `src/Admin/ledger/` (SectionTitle, KpiLedgerRow, BreakdownLedgerRow, LedgerBar, Sparkline on
-  recharts, StatusMarker, RecentUsersLedger, skeleton/error/missing-value) — candidates to promote
+  recharts, StatusMarker, UserRow/UsersList, skeleton/error/missing-value) — candidates to promote
   to `@lila-care/design-system` later.
 - `src/Admin/ledger/ledger-tokens.css` holds tokens NOT yet approved (`--teal-700`, `--teal-500`,
   `--radius-xs`, `--border-strong`, `type-*` text utilities), all marked
@@ -111,12 +111,44 @@ No React Query/SWR — data fetching is done via hooks that hold their own `useS
   radius-lg) + `TextButton` (inline primary text action), `FormField` + `FIELD_CONTROL_CLASS`,
   `SidePanel`/`SidePanelFooter`. `ledger-tokens.css` gained `--overlay-scrim` and
   `type-h1`/`type-h2`/`type-h3`/`type-label-sm-strong`, all PENDING design-token-sync approval.
-- `UsersTable.tsx`/`FormsTable.tsx` still build their own table manually with
-  `@tanstack/react-table`.
-- `UsersPage.tsx`/`UsersTable.tsx`/`UserDetails.tsx` — paginated users list + detail. Tables use
-  raw `Table`/`TableHeader`/`TableBody`/... primitives wired manually with
-  `@tanstack/react-table` (`useReactTable`, `ColumnDef[]`) — the same pattern repeats in
-  `FormsTable.tsx`. There is no shared generic `<DataTable>` wrapper component in this repo yet.
+- `FormsTable.tsx` still builds its own table manually with `@tanstack/react-table` (raw
+  `Table`/`TableHeader`/... primitives, `useReactTable`, `ColumnDef[]`). There is no shared generic
+  `<DataTable>` wrapper in this repo yet.
+- Dashboard v3 + Usuarias v3 ("usuarias visibles", Figma `fAVj1toZn8nIMNc2GBblKY` page `304:9`,
+  ms-lila `GET /admin/dashboard/users[/recent|/attention|/:userId]` + `funnel` in `/stats`). The
+  user list now starts from Cognito in the BE, so accounts without a profile (unconfirmed, no
+  onboarding) show up.
+  - `DashboardPage` adds `FunnelSection` (7 `FunnelRow`s from `stats.funnel`, each a link to
+    `/admin/users?stage=…&from=&to=`) and `AttentionSection` (`useAttentionUsers`, max 5
+    `AttentionRow`s, empty = "Nadie requiere atención"). `RecentUsersSection` now renders 8
+    `UserRow`s via `ledger/UsersList` (no client-side sorting any more). KPIs "Nuevas usuarias" /
+    "Usuarias activas" are links (`?from&to` / `?from&to&activeInRange=true`); "activa" has a
+    focus-accessible `DefinitionTip`; `retention.unconfirmedCount` renders the note
+    "Incluye N cuentas sin confirmar".
+  - `UsersPage` = tabs "Usuarias" (`UsersListSection`) / "Template" (`TemplateSection`, moved out
+    of the old page unchanged). The old `UsersTable`/`UserDetails` modal are gone.
+  - **URL state, no extra routes**: filters live in the query string (`?stage=&from=&to=&search=
+    &sort=&order=&page=&activeInRange=`; parse/build in `usersFilters.ts`, hooks in
+    `useAdminUrl.ts`: `useUsersFilters`, `useSelectedUser`). The detail panel is `?user=<userId>`
+    on whatever admin page is open (dashboard or users), so closing keeps the filters and the
+    panel opens from Recientes / Atención / Usuarias. Filter changes use `replace`; opening a row
+    is a normal link (push).
+  - `UserDetailPanel` (radix `Dialog`: scrim, focus trap, Escape/Cerrar close, focus returns to
+    the opener) = 440px sheet from `lg`, full screen below. Content: identity, `Timeline`
+    (`TimelineItem` done/stopped/pending) from `detail.timeline`, `Resumen`, privacy note. "Se
+    detuvo acá" is only highlighted for onboarding milestones (`isStoppedHighlight`); later missing
+    milestones are just "Aún no". Never shows chat/answer content.
+  - Rows: one `<a>` per row (`UserRow`/`FunnelRow`/`AttentionRow`), never `onClick` on `<tr>`;
+    colors live on inner spans (global `a:hover`). Columns appear from `xl` (`USERS_LIST_COLUMNS`),
+    below that rows are two stacked lines (768 for Usuarias was not designed: rail + stacked rows +
+    full-screen panel is the approved fallback).
+  - Copy/enums: `usersFormat.ts` maps stage / accountStatus / provider / subscriptionStatus /
+    attentionReason / milestones to Spanish (raw enums never reach the UI); the ".con" typo hint
+    (`looksLikeEmailTypo`) is computed in the FE for `unconfirmed` accounts. `StageMarker` has the
+    4 Figma variants (ring/half/filled/teal). Dates for users render in America/Bogota
+    (`formatShortDate`/`formatShortDateTime`).
+  - Tests: `e2e/admin-users-visibility.spec.ts` (all API mocked with exact-path matchers: the glob
+    `/admin/dashboard/users*` would also swallow `/recent`, `/attention` and `/:userId`).
 - `FormsPage.tsx`/`FormEditor.tsx`/`FormQuestionBuilder.tsx` — onboarding form builder/editor.
 - `dashboardFormat.ts` — pure formatting helpers (`formatDateLong`, `formatCurrency`, `formatCount`,
   `formatPercent`, `findPeak`/`describePeak`, `formatRelativeDate`, `describeTrend`). No date library dependency (`date-fns`/`dayjs`/etc.) — everything goes

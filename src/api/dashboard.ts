@@ -21,13 +21,30 @@ export interface ProfileTiersDto {
   clinico: number;
 }
 
+// Cohort of accounts registered in the range; each step is "reached", so counts only go down.
+export interface DashboardFunnelDto {
+  registered: number;
+  confirmed: number;
+  onboardingStarted: number;
+  onboardingCompleted: number;
+  firstCycleReport: number;
+  firstConversation: number;
+  activeSubscription: number;
+}
+
 export interface DashboardStatsDto {
   range: { days: number; from: string; to: string };
   newUsers: { total: number; byDay: DailyCount[] };
   activeUsers: { total: number };
   cycleReports: { total: number; byDay: DailyCount[] };
   conversations: { total: number; byDay: DailyCount[] };
-  retention: { newUsersInRange: number; returned: number; rate: number };
+  retention: {
+    newUsersInRange: number;
+    returned: number;
+    rate: number;
+    unconfirmedCount: number;
+  };
+  funnel: DashboardFunnelDto;
   subscriptions: SubscriptionStatsDto;
   profileTiers: ProfileTiersDto;
 }

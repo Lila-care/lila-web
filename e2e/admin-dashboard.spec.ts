@@ -40,6 +40,10 @@ async function mockRecentUsersEmpty(page: Page) {
   await page.route(`${API_URL}/admin/dashboard/users/recent*`, (route) =>
     fulfillJson(route, []),
   );
+  // Dashboard v3: `AttentionSection` also fetches on every render of the success state.
+  await page.route(`${API_URL}/admin/dashboard/users/attention*`, (route) =>
+    fulfillJson(route, []),
+  );
 }
 
 function byDay(counts: number[], startDay = 1) {
@@ -59,7 +63,17 @@ function buildStats(
     activeUsers: { total: 40 },
     cycleReports: { total: 18, byDay: byDay([6, 6, 6]) },
     conversations: { total: 30, byDay: byDay([10, 8, 12]) },
-    retention: { newUsersInRange: 12, returned: 6, rate: 0.5 },
+    retention: { newUsersInRange: 12, returned: 6, rate: 0.5, unconfirmedCount: 0 },
+    // Dashboard v3: `FunnelSection` reads `funnel` whenever stats load.
+    funnel: {
+      registered: 12,
+      confirmed: 10,
+      onboardingStarted: 8,
+      onboardingCompleted: 6,
+      firstCycleReport: 4,
+      firstConversation: 3,
+      activeSubscription: 1,
+    },
     // KAN-43: `DashboardStatsDto` now requires these two fields — the sections that read
     // them (`RevenueSection`/`TierSection`) are covered by
     // `e2e/admin-dashboard-kan43.spec.ts`, so this fixture just needs valid shapes to avoid
@@ -80,7 +94,16 @@ const EMPTY_STATS = buildStats(30, {
   activeUsers: { total: 0 },
   cycleReports: { total: 0, byDay: byDay([0, 0, 0]) },
   conversations: { total: 0, byDay: byDay([0, 0, 0]) },
-  retention: { newUsersInRange: 0, returned: 0, rate: 0 },
+  retention: { newUsersInRange: 0, returned: 0, rate: 0, unconfirmedCount: 0 },
+  funnel: {
+    registered: 0,
+    confirmed: 0,
+    onboardingStarted: 0,
+    onboardingCompleted: 0,
+    firstCycleReport: 0,
+    firstConversation: 0,
+    activeSubscription: 0,
+  },
 });
 
 test.describe("Admin Dashboard — stats (Ledger v2)", () => {
@@ -169,7 +192,7 @@ test.describe("Admin Dashboard — stats (Ledger v2)", () => {
           activeUsers: { total: 0 },
           cycleReports: { total: 0, byDay: byDay([0, 0, 0]) },
           conversations: { total: 0, byDay: byDay([0, 0, 0]) },
-          retention: { newUsersInRange: 0, returned: 0, rate: 0 },
+          retention: { newUsersInRange: 0, returned: 0, rate: 0, unconfirmedCount: 0 },
           subscriptions: {
             totalSubscribers: 84,
             byStatus: { active: 70, past_due: 9, canceled: 5 },
@@ -320,7 +343,7 @@ test.describe("Admin layout — sidebar / rail / tab bar", () => {
       "page",
     );
 
-    await page.getByRole("link", { name: "Usuarias" }).click();
+    await page.getByRole("link", { name: "Usuarias", exact: true }).click();
     await expect(page.getByTestId("users-page")).toBeVisible();
     await expect(page.getByTestId("nav-item-users")).toHaveAttribute(
       "aria-current",
@@ -469,7 +492,7 @@ test.describe("Admin Users", () => {
 
     await page.goto(`${BASE_URL}/admin/users`);
 
-    await expect(page.getByTestId("users-table-empty")).toBeVisible();
+    await expect(page.getByTestId("users-empty")).toBeVisible();
   });
 
   test("estado de error — muestra mensaje si la API falla", async ({
@@ -483,49 +506,6 @@ test.describe("Admin Users", () => {
     await page.goto(`${BASE_URL}/admin/users`);
 
     await expect(page.getByTestId("users-error")).toBeVisible();
-  });
-
-  test("happy path — lista usuarias y abre el detalle al hacer click", async ({
-    page,
-  }) => {
-    await seedAuthToken(page);
-    await page.route(`${API_URL}/admin/dashboard/users*`, (route) =>
-      fulfillJson(route, {
-        data: [
-          {
-            userId: "user-1",
-            email: "usuaria@example.com",
-            cycleReports: 3,
-            conversations: 5,
-            lastActivityAt: "2026-08-01T00:00:00.000Z",
-          },
-        ],
-        total: 1,
-        page: 1,
-        limit: 20,
-        totalPages: 1,
-      }),
-    );
-    await page.route(`${API_URL}/admin/dashboard/users/user-1`, (route) =>
-      fulfillJson(route, {
-        userId: "user-1",
-        email: "usuaria@example.com",
-        tiers: ["bienestar"],
-        cycleReports: 3,
-        conversations: 5,
-        lastActivityAt: "2026-08-01T00:00:00.000Z",
-      }),
-    );
-
-    await page.goto(`${BASE_URL}/admin/users`);
-
-    await expect(page.getByTestId("user-row")).toHaveCount(1);
-    await page.getByTestId("user-row").click();
-
-    await expect(page.getByTestId("user-details")).toBeVisible();
-    await expect(page.getByTestId("user-details")).toContainText(
-      "usuaria@example.com",
-    );
   });
 });
 
