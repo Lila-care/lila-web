@@ -6,6 +6,10 @@ import RevenueSection from "@/Admin/RevenueSection";
 import ActivitySection from "@/Admin/ActivitySection";
 import TierSection from "@/Admin/TierSection";
 import RecentUsersSection from "@/Admin/RecentUsersSection";
+import FunnelSection from "@/Admin/FunnelSection";
+import AttentionSection from "@/Admin/AttentionSection";
+import { UserDetailPanel } from "@/Admin/UserDetailPanel";
+import { useSelectedUser } from "@/Admin/useAdminUrl";
 import { SectionTitle } from "@/Admin/ledger/SectionTitle";
 import { LedgerSkeleton } from "@/Admin/ledger/LedgerSkeleton";
 import { LedgerError } from "@/Admin/ledger/LedgerError";
@@ -13,6 +17,8 @@ import { LedgerError } from "@/Admin/ledger/LedgerError";
 const SKELETON_SECTIONS = [
   { id: "revenue", title: "Ingresos" },
   { id: "activity", title: "Actividad" },
+  { id: "funnel", title: "Embudo de usuarias" },
+  { id: "attention", title: "Requieren atención" },
   { id: "recent-users", title: "Usuarias recientes" },
 ];
 
@@ -59,6 +65,7 @@ function DashboardPage() {
   } = useDashboardStats();
   const announcement = useRangeAnnouncement(stats?.range.days);
   const hasError = !isInitialLoading && !!error;
+  const { userId, hrefFor, close } = useSelectedUser();
 
   return (
     <AdminLayout navTone={hasError ? "neutral" : "default"}>
@@ -110,9 +117,14 @@ function DashboardPage() {
                 <TierSection profileTiers={stats.profileTiers} />
               </div>
             </div>
-            <RecentUsersSection />
+            <div className="grid min-w-0 gap-12 xl:grid-cols-2 xl:gap-16">
+              <FunnelSection stats={stats} />
+              <AttentionSection hrefFor={hrefFor} />
+            </div>
+            <RecentUsersSection hrefFor={hrefFor} selectedUserId={userId} />
           </div>
         )}
+        {userId && <UserDetailPanel userId={userId} onClose={close} />}
       </div>
     </AdminLayout>
   );

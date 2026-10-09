@@ -24,3 +24,13 @@ export const DISCOUNTS_LEDGER_COLUMNS =
 // Email 340 | Plan 200 | Estado 160 | Vence 200 | Origen 216.
 export const SUBSCRIBERS_LEDGER_COLUMNS =
   "lg:grid-cols-[minmax(0,340fr)_minmax(0,200fr)_minmax(0,160fr)_minmax(0,200fr)_minmax(0,216fr)]";
+
+// Users list (Figma 889:2375 / 894:4342): stacked two-line rows below `xl`; from `xl`
+// email (flex) | stage | registered 100 | conversations 100 | reports 100 | last activity 110 |
+// chevron 16. The stage column is 208px at 1280 and 250px (Figma 1440) from 1440.
+export const USERS_LIST_COLUMNS =
+  "grid-cols-[minmax(0,1fr)_auto] xl:grid-cols-[minmax(0,1fr)_13rem_6.25rem_6.25rem_6.25rem_6.875rem_1rem] min-[1440px]:xl:grid-cols-[minmax(0,1fr)_15.625rem_6.25rem_6.25rem_6.25rem_6.875rem_1rem]";
+
+// Funnel (Figma 886:2157): label | count 48 | % of previous step 44 | bar 100 | chevron 12.
+export const FUNNEL_COLUMNS =
+  "grid-cols-[minmax(0,1fr)_3rem_2.75rem_6.25rem_0.75rem]";

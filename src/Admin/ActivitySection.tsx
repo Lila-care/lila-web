@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { Fragment, ReactNode } from "react";
 import { DailyCount, DashboardStatsDto } from "@/api/dashboard";
 import {
   describePeak,
@@ -11,6 +11,8 @@ import { KpiLedgerRow } from "@/Admin/ledger/KpiLedgerRow";
 import { KPI_LEDGER_COLUMNS } from "@/Admin/ledger/ledgerColumns";
 import { Sparkline } from "@/Admin/ledger/Sparkline";
 import { MissingValue } from "@/Admin/ledger/MissingValue";
+import { DefinitionTip } from "@/Admin/ledger/DefinitionTip";
+import { buildUsersHref } from "@/Admin/usersFilters";
 
 interface ActivitySectionProps {
   stats: DashboardStatsDto;
@@ -22,14 +24,18 @@ interface ActivityRow {
   total: ReactNode;
   detail: ReactNode;
   trend: ReactNode;
+  href?: string;
+  hint?: ReactNode;
 }
 
 function seriesRow(
   testId: string,
   label: string,
   series: { total: number; byDay: DailyCount[] },
+  href?: string,
 ): ActivityRow {
   return {
+    href,
     testId,
     label,
     total: formatCount(series.total),
@@ -55,11 +61,26 @@ function retentionRow(retention: DashboardStatsDto["retention"]): ActivityRow {
 
 // No ▲▼ deltas on purpose: the BE stats contract has no previous-period comparison.
 function buildActivityRows(stats: DashboardStatsDto): ActivityRow[] {
+  const { from, to } = stats.range;
   return [
-    seriesRow("kpi-row-new-users", "Nuevas usuarias", stats.newUsers),
+    seriesRow(
+      "kpi-row-new-users",
+      "Nuevas usuarias",
+      stats.newUsers,
+      buildUsersHref({ from, to }),
+    ),
     {
       testId: "kpi-row-active-users",
       label: "Usuarias activas",
+      href: buildUsersHref({ from, to, activeInRange: true }),
+      hint: (
+        <DefinitionTip
+          label="¿Qué es una usuaria activa?"
+          testId="active-users-definition"
+        >
+          Activa: escribió a Lila o registró un ciclo en el rango.
+        </DefinitionTip>
+      ),
       total: formatCount(stats.activeUsers.total),
       detail: "Escribieron o registraron ciclo",
       // The BE has no `byDay` for active users — nothing to chart.
@@ -73,6 +94,23 @@ function buildActivityRows(stats: DashboardStatsDto): ActivityRow[] {
     ),
     seriesRow("kpi-row-cycle-reports", "Reportes de ciclo", stats.cycleReports),
   ];
+}
+
+const ACTIVITY_DEFINITIONS =
+  "Activa: escribió a Lila o registró un ciclo en el rango. Retención: nuevas usuarias que volvieron después de registrarse.";
+
+// Sits right under the Retention row (Figma `retention-note`).
+function UnconfirmedNote({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <li
+      className="type-caption border-b border-border-default py-1 text-text-secondary"
+      data-testid="retention-note"
+    >
+      Incluye {formatCount(count)}{" "}
+      {count === 1 ? "cuenta sin confirmar" : "cuentas sin confirmar"}
+    </li>
+  );
 }
 
 function hasNoActivity(stats: DashboardStatsDto): boolean {
@@ -103,10 +141,21 @@ function ActivitySection({ stats }: ActivitySectionProps) {
         </LedgerHeader>
         <ul>
           {buildActivityRows(stats).map((row) => (
-            <KpiLedgerRow key={row.testId} {...row} />
+            <Fragment key={row.testId}>
+              <KpiLedgerRow {...row} />
+              {row.testId === "kpi-row-retention" && (
+                <UnconfirmedNote count={stats.retention.unconfirmedCount} />
+              )}
+            </Fragment>
           ))}
         </ul>
       </div>
+      <p
+        className="text-[11px] leading-4 text-text-secondary"
+        data-testid="activity-definitions"
+      >
+        {ACTIVITY_DEFINITIONS}
+      </p>
       {hasNoActivity(stats) && (
         <p
           className="type-body-sm text-text-secondary"
