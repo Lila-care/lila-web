@@ -5,6 +5,7 @@ import { TemplateSection } from "@/Admin/TemplateSection";
 import { UserDetailPanel } from "@/Admin/UserDetailPanel";
 import { useSelectedUser } from "@/Admin/useAdminUrl";
 import { LedgerTabs, type LedgerTab } from "@/Admin/ledger/LedgerTabs";
+import { Breadcrumb } from "@/Admin/ledger/Breadcrumb";
 import { tabId, tabPanelId } from "@/Admin/ledger/tabIds";
 
 type UsersTabKey = "users" | "template";
@@ -24,7 +25,15 @@ function UsersPage() {
         className="flex min-h-full flex-col gap-6 px-4 pt-6 pb-10 md:px-8 md:pt-8 lg:pt-10 lg:pr-10 lg:pb-16 lg:pl-16"
         data-testid="users-page"
       >
-        <h1 className="type-h4-strong text-text-primary">Usuarias</h1>
+        <div className="flex flex-col gap-1">
+          <Breadcrumb
+            items={[
+              { label: "Dashboard", href: "/admin/dashboard" },
+              { label: "Usuarias" },
+            ]}
+          />
+          <h1 className="type-h4-strong text-text-primary">Usuarias</h1>
+        </div>
         <LedgerTabs
           tabs={TABS}
           activeId={activeTab}

@@ -733,3 +733,30 @@ test.describe("Usuarias v3 — lista, filtros y panel", () => {
     await expectNoHorizontalOverflow(page, 1440);
   });
 });
+
+test.describe("Usuarias — breadcrumb", () => {
+  test("breadcrumb 'Dashboard › Usuarias' con filtros, link navega al dashboard", async ({ page }) => {
+    await seedAuthToken(page);
+    await mockDashboard(page);
+    await page.route(isUsersList, (route) => fulfillJson(route, page1([buildUser()])));
+
+    await page.goto(`${BASE_URL}/admin/users?stage=subscribed`);
+    const nav = page.getByRole("navigation", { name: "Breadcrumb" });
+    await expect(nav).toBeVisible();
+    await expect(nav).toHaveText(/Dashboard\s*›\s*Usuarias/);
+    await expect(nav.locator('[aria-current="page"]')).toHaveText("Usuarias");
+
+    await nav.getByRole("link", { name: "Dashboard" }).click();
+    await expect(page).toHaveURL(/\/admin\/dashboard$/);
+  });
+
+  test("breadcrumb a 375px sin overflow horizontal", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await seedAuthToken(page);
+    await page.route(isUsersList, (route) => fulfillJson(route, page1([buildUser()])));
+
+    await page.goto(`${BASE_URL}/admin/users`);
+    await expect(page.getByTestId("breadcrumb")).toBeVisible();
+    await expectNoHorizontalOverflow(page, 375);
+  });
+});
