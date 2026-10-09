@@ -115,3 +115,34 @@ export function describeTrend(byDay: DailyCount[]): string {
   if (secondAvg < firstAvg * 0.9) return "tendencia descendente";
   return "tendencia estable";
 }
+
+// "12 sep" / "7 oct · 09:16" for user timestamps (createdAt, milestones). Rendered in Bogotá
+// time whatever the admin's browser timezone is — same rule as the dashboard ranges.
+const BOGOTA_PARTS_FORMATTER = new Intl.DateTimeFormat("es-CO", {
+  timeZone: "America/Bogota",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+function bogotaParts(isoString: string): Record<string, string> {
+  const parts: Record<string, string> = {};
+  for (const part of BOGOTA_PARTS_FORMATTER.formatToParts(
+    new Date(isoString),
+  )) {
+    parts[part.type] = part.value;
+  }
+  return parts;
+}
+
+export function formatShortDate(isoString: string): string {
+  const { day, month } = bogotaParts(isoString);
+  return `${day} ${month.replace(".", "").slice(0, 3)}`;
+}
+
+export function formatShortDateTime(isoString: string): string {
+  const { hour, minute } = bogotaParts(isoString);
+  return `${formatShortDate(isoString)} · ${hour}:${minute}`;
+}
