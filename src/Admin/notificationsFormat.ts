@@ -1,6 +1,7 @@
 import { ApiError } from "@/api/http";
 import {
   ALLOWLIST_MAX_USERS,
+  type BroadcastResult,
   BODY_MAX_LENGTH,
   TITLE_MAX_LENGTH,
   type BroadcastPayload,
@@ -153,4 +154,36 @@ export function toBroadcastError(error: unknown): BroadcastError {
     default:
       return { kind: "error", message: GENERIC_ERROR };
   }
+}
+
+// Plain-Spanish reading of a simulation sent to ONE user. `skipped` counts the user left out
+// by each rule; with nothing skipped and no device, she simply has no device registered.
+export function describeSingleUserReach(result: BroadcastResult): {
+  reachable: boolean;
+  message: string;
+} {
+  const { devices } = result.recipients;
+  if (devices > 0) {
+    return {
+      reachable: true,
+      message: `Le llegaría en ${devices} ${devices === 1 ? "dispositivo" : "dispositivos"}.`,
+    };
+  }
+  const { skipped } = result;
+  if (skipped.categoryOff > 0) {
+    return {
+      reachable: false,
+      message: "No le llegaría: tiene apagada esta categoría de notificaciones.",
+    };
+  }
+  if (skipped.quietHours > 0) {
+    return {
+      reachable: false,
+      message: "No le llegaría ahora: está en su horario de silencio.",
+    };
+  }
+  return {
+    reachable: false,
+    message: "Esta usuaria aún no tiene un dispositivo registrado.",
+  };
 }

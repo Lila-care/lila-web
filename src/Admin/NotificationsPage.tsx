@@ -4,18 +4,16 @@ import { FIELD_CONTROL_CLASS, FormField } from "@/Admin/ledger/FormField";
 import { LedgerButton } from "@/Admin/ledger/LedgerButton";
 import {
   ConfirmSendDialog,
+  FieldError,
+  NotificationMessageFields,
   SendOutcome,
   SimulationSummary,
 } from "@/Admin/NotificationsParts";
 import { useBroadcast } from "@/Admin/useBroadcast";
 import {
   ALLOWLIST_MAX_USERS,
-  BODY_MAX_LENGTH,
-  TITLE_MAX_LENGTH,
-  type NotificationCategory,
 } from "@/api/notifications";
 import {
-  CATEGORY_OPTIONS,
   EMPTY_FORM,
   ENDPOINT_UNAVAILABLE_NOTICE,
   parseAllowlist,
@@ -24,19 +22,6 @@ import {
   type FormErrors,
   type NotificationFormValues,
 } from "@/Admin/notificationsFormat";
-
-function FieldError({ message, id }: { message?: string; id: string }) {
-  if (!message) return null;
-  return (
-    <p id={id} role="alert" className="type-caption text-destructive">
-      {message}
-    </p>
-  );
-}
-
-function counterText(length: number, max: number) {
-  return `${length}/${max}`;
-}
 
 interface FormFieldsProps {
   values: NotificationFormValues;
@@ -49,60 +34,12 @@ function FormFields({ values, errors, disabled, onChange }: FormFieldsProps) {
   const allowlistCount = parseAllowlist(values.allowlist).length;
   return (
     <div className="flex flex-col gap-5">
-      <FormField
-        label="Título (opcional)"
-        htmlFor="notif-title"
-        hint={counterText(values.title.length, TITLE_MAX_LENGTH)}
-      >
-        <input
-          id="notif-title"
-          type="text"
-          value={values.title}
-          maxLength={TITLE_MAX_LENGTH}
-          disabled={disabled}
-          onChange={(e) => onChange({ title: e.target.value })}
-          className={FIELD_CONTROL_CLASS}
-          data-testid="notif-title"
-        />
-        <FieldError message={errors.title} id="notif-title-error" />
-      </FormField>
-
-      <FormField
-        label="Texto"
-        htmlFor="notif-body"
-        hint={counterText(values.body.length, BODY_MAX_LENGTH)}
-      >
-        <textarea
-          id="notif-body"
-          rows={3}
-          value={values.body}
-          maxLength={BODY_MAX_LENGTH}
-          disabled={disabled}
-          onChange={(e) => onChange({ body: e.target.value })}
-          className={FIELD_CONTROL_CLASS}
-          data-testid="notif-body"
-        />
-        <FieldError message={errors.body} id="notif-body-error" />
-      </FormField>
-
-      <FormField label="Categoría" htmlFor="notif-category">
-        <select
-          id="notif-category"
-          value={values.category}
-          disabled={disabled}
-          onChange={(e) =>
-            onChange({ category: e.target.value as NotificationCategory })
-          }
-          className={FIELD_CONTROL_CLASS}
-          data-testid="notif-category"
-        >
-          {CATEGORY_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </FormField>
+      <NotificationMessageFields
+        values={values}
+        errors={errors}
+        disabled={disabled}
+        onChange={onChange}
+      />
 
       <FormField
         label="Hora local (opcional)"

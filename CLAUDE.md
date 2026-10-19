@@ -43,6 +43,9 @@ Single `<Switch>`, two route families:
   send unlocks only for a simulation of the exact same data (`payloadSignature`), needs an
   allowlist (1..200 subs) and ≥1 device. A 404 shows an "endpoint not deployed yet" notice. The
   mobile tab bar uses `tabLabel: "Avisos"` (7 tabs don't fit long labels).
+  The user detail panel (`UserDetailPanel.tsx`) ends with `UserNotificationSender.tsx`: same
+  flow for ONE user (`allowlistUserIds:[userId]`), sharing `useBroadcast`, `NotificationMessageFields`
+  and `ConfirmSendDialog`; rendered with `key={userId}` so changing user resets it.
 
 ### Auth (`src/auth/`)
 - `AuthContext.tsx` — persists Cognito tokens in `localStorage` under keys it exports

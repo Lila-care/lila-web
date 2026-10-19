@@ -1,10 +1,104 @@
 import { Dialog } from "radix-ui";
+import { FIELD_CONTROL_CLASS, FormField } from "@/Admin/ledger/FormField";
 import { LedgerButton } from "@/Admin/ledger/LedgerButton";
-import type { BroadcastResult } from "@/api/notifications";
 import {
+  BODY_MAX_LENGTH,
+  TITLE_MAX_LENGTH,
+  type BroadcastResult,
+  type NotificationCategory,
+} from "@/api/notifications";
+import {
+  CATEGORY_OPTIONS,
   categoryLabel,
+  type FormErrors,
   type NotificationFormValues,
 } from "@/Admin/notificationsFormat";
+
+export function FieldError({ message, id }: { message?: string; id: string }) {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="type-caption text-destructive">
+      {message}
+    </p>
+  );
+}
+
+interface MessageFieldsProps {
+  values: NotificationFormValues;
+  errors: FormErrors;
+  disabled: boolean;
+  onChange: (patch: Partial<NotificationFormValues>) => void;
+  // Prefix for element ids/test ids so two forms can coexist on a page.
+  idPrefix?: string;
+}
+
+// Title / text / category, shared by the bulk screen and the single-user sender.
+export function NotificationMessageFields({
+  values,
+  errors,
+  disabled,
+  onChange,
+  idPrefix = "notif",
+}: MessageFieldsProps) {
+  return (
+    <>
+      <FormField
+        label="Título (opcional)"
+        htmlFor={`${idPrefix}-title`}
+        hint={`${values.title.length}/${TITLE_MAX_LENGTH}`}
+      >
+        <input
+          id={`${idPrefix}-title`}
+          type="text"
+          value={values.title}
+          maxLength={TITLE_MAX_LENGTH}
+          disabled={disabled}
+          onChange={(e) => onChange({ title: e.target.value })}
+          className={FIELD_CONTROL_CLASS}
+          data-testid={`${idPrefix}-title`}
+        />
+        <FieldError message={errors.title} id={`${idPrefix}-title-error`} />
+      </FormField>
+
+      <FormField
+        label="Texto"
+        htmlFor={`${idPrefix}-body`}
+        hint={`${values.body.length}/${BODY_MAX_LENGTH}`}
+      >
+        <textarea
+          id={`${idPrefix}-body`}
+          rows={3}
+          value={values.body}
+          maxLength={BODY_MAX_LENGTH}
+          disabled={disabled}
+          onChange={(e) => onChange({ body: e.target.value })}
+          className={FIELD_CONTROL_CLASS}
+          data-testid={`${idPrefix}-body`}
+        />
+        <FieldError message={errors.body} id={`${idPrefix}-body-error`} />
+      </FormField>
+
+      <FormField label="Categoría" htmlFor={`${idPrefix}-category`}>
+        <select
+          id={`${idPrefix}-category`}
+          value={values.category}
+          disabled={disabled}
+          onChange={(e) =>
+            onChange({ category: e.target.value as NotificationCategory })
+          }
+          className={FIELD_CONTROL_CLASS}
+          data-testid={`${idPrefix}-category`}
+        >
+          {CATEGORY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </FormField>
+    </>
+  );
+}
 
 interface ReachRowProps {
   label: string;
@@ -120,6 +214,8 @@ interface ConfirmSendDialogProps {
   devices: number;
   users: number;
   sending: boolean;
+  // Single-user send: names who gets it (e.g. their email) instead of the user count.
+  recipientLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -130,6 +226,7 @@ export function ConfirmSendDialog({
   devices,
   users,
   sending,
+  recipientLabel,
   onConfirm,
   onCancel,
 }: ConfirmSendDialogProps) {
@@ -149,11 +246,16 @@ export function ConfirmSendDialog({
           <div id="notifications-confirm-desc" className="flex flex-col gap-3">
             <p className="type-body-md text-text-primary">
               Se enviará a{" "}
+              {recipientLabel ? (
+                <strong data-testid="confirm-recipient">{recipientLabel}</strong>
+              ) : null}{" "}
               <strong data-testid="confirm-devices">
                 {devices} {devices === 1 ? "dispositivo" : "dispositivos"}
-              </strong>{" "}
-              ({users} {users === 1 ? "usuaria" : "usuarias"}). No se puede
-              deshacer.
+              </strong>
+              {recipientLabel
+                ? ""
+                : ` (${users} ${users === 1 ? "usuaria" : "usuarias"})`}
+              . No se puede deshacer.
             </p>
             <div
               className="flex flex-col gap-1 rounded-md border border-border-default p-3"
