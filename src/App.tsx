@@ -10,6 +10,7 @@ import ChangePassword from "./Admin/ChangePassword";
 import AuthCallback from "./Admin/AuthCallback";
 import FormsPage from "./Admin/FormsPage";
 import PlansPage from "./Admin/PlansPage";
+import NotificationsPage from "./Admin/NotificationsPage";
 import ContentPage from "./Admin/ContentPage";
 import ArticleDetailPage from "./Admin/ArticleDetailPage";
 import ChatPage from "./Chat/ChatPage";
@@ -66,6 +67,14 @@ const App = () => {
           component={() => (
             <ProtectedRoute>
               <PlansPage />
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/admin/notifications"
+          component={() => (
+            <ProtectedRoute>
+              <NotificationsPage />
             </ProtectedRoute>
           )}
         />

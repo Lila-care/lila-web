@@ -37,7 +37,12 @@ Single `<Switch>`, two route families:
   `/aprende`, `/perfil`, `/perfil/privacidad`, `/login` (`UserLogin.tsx`), `/terms`.
 - **Admin** (`src/Admin/`), Cognito-gated: `/admin` (login), `/admin/change-password`,
   `/auth/callback`, and behind `<ProtectedRoute>`: `/admin/dashboard`, `/admin/users`,
-  `/admin/reports`, `/admin/forms`, `/admin/plans`.
+  `/admin/reports`, `/admin/forms`, `/admin/plans`, `/admin/notifications`.
+  Notificaciones (`NotificationsPage.tsx`, ms-lila `POST /admin/notifications/broadcast`): form →
+  "Simular envío" (`dryRun:true`) → separate "Enviar de verdad" behind a confirm dialog; the real
+  send unlocks only for a simulation of the exact same data (`payloadSignature`), needs an
+  allowlist (1..200 subs) and ≥1 device. A 404 shows an "endpoint not deployed yet" notice. The
+  mobile tab bar uses `tabLabel: "Avisos"` (7 tabs don't fit long labels).
 
 ### Auth (`src/auth/`)
 - `AuthContext.tsx` — persists Cognito tokens in `localStorage` under keys it exports

@@ -4,6 +4,7 @@ import {
   BookOpen,
   ClipboardList,
   FileText,
+  Bell,
   LayoutDashboard,
   LogOut,
   Users,
@@ -34,6 +35,13 @@ const NAV_LINKS: AdminNavLink[] = [
   },
   // Figma Gestión de Planes reuses the clipboard-list icon for Planes.
   { id: "plans", href: "/admin/plans", label: "Planes", icon: ClipboardList },
+  {
+    id: "notifications",
+    href: "/admin/notifications",
+    label: "Notificaciones",
+    tabLabel: "Avisos",
+    icon: Bell,
+  },
   {
     id: "content",
     href: CONTENT_HOME_PATH,
