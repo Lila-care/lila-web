@@ -120,6 +120,11 @@ export interface UserAgent {
   templateVersion: number;
   isGuest: boolean;
   hasActiveTemplate: boolean;
+  // Mirrors ms-lila's `UserAgentDto#hasActiveSubscription` (LilaService#getAgentMe) — the FE
+  // upgrade-nag gate (`useLilaChat.ts`) must never fire for a user who already has a paid
+  // subscription, since that gate is otherwise a pure client-side message counter with no
+  // knowledge of billing state.
+  hasActiveSubscription: boolean;
   freeQuestionLimit: number;
   onboarding: OnboardingStatus;
   // Only populated on the account's first sign-in, when a completed guest `FormProgress`
