@@ -32,7 +32,12 @@ UI primitives come from the published `@lila-care/design-system` package (`^0.3.
 shadcn copies — check that package's exports before building a new primitive from scratch.
 
 ### Routes (`src/App.tsx`)
-Single `<Switch>`, two route families:
+Single `<Switch>`, three route families:
+- **Public landing**: `/` renders `src/Landing/` (static marketing page, no auth, no API calls;
+  one component per section + `landingContent.ts`). Figma `fAVj1toZn8nIMNc2GBblKY` node `1089:2`.
+  Phone mockups are PNG exports from Figma with the background knocked out to transparent
+  (`src/assets/landing/`). `index.css` has unlayered `a:hover{color}` and `a{font-weight:500}`:
+  on anchors use `hover:text-*!` / `font-normal!` to win.
 - **Consumer app** (no auth guard in the router itself): `/hoy`, `/chat`, `/calendario`,
   `/aprende`, `/perfil`, `/perfil/privacidad`, `/login` (`UserLogin.tsx`), `/terms`.
 - **Admin** (`src/Admin/`), Cognito-gated: `/admin` (login), `/admin/change-password`,

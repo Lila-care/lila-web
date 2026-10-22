@@ -1,4 +1,4 @@
-import { Route, Switch, Redirect } from "wouter";
+import { Route, Switch } from "wouter";
 
 import "./App.css";
 import Terms from "./Terms";
@@ -21,12 +21,13 @@ import CalendarioPage from "./Calendario";
 import AprendePage from "./Aprende";
 import PerfilPage from "./Perfil";
 import PrivacidadPage from "./Perfil/Privacidad";
+import LandingPage from "./Landing";
 
 const App = () => {
   return (
     <AuthProvider>
       <Switch>
-        <Route path="/">{() => <Redirect to="/hoy" />}</Route>
+        <Route path="/" component={LandingPage} />
         <Route path="/terms" component={Terms} />
         <Route
           path="/admin/dashboard"
