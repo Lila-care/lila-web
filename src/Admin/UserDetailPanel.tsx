@@ -29,6 +29,7 @@ import {
   type TimelineItemState,
 } from "@/Admin/ledger/TimelineItem";
 import { LedgerError } from "@/Admin/ledger/LedgerError";
+import { UserNotificationSender } from "@/Admin/UserNotificationSender";
 
 interface UserDetailPanelProps {
   userId: string;
@@ -215,6 +216,11 @@ export function UserDetailPanel({ userId, onClose }: UserDetailPanelProps) {
               <Identity user={user} />
               <Timeline user={user} />
               <Summary user={user} />
+              <UserNotificationSender
+                key={user.userId}
+                userId={user.userId}
+                email={user.email}
+              />
               <p className="type-caption border-t border-border-default pt-4 text-text-secondary" data-testid="user-panel-privacy">
                 {PRIVACY_NOTE}
               </p>

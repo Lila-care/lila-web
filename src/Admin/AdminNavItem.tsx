@@ -8,6 +8,8 @@ export interface AdminNavLink {
   id: string;
   href: string;
   label: string;
+  // Mobile bottom tab only: 7 sections leave ~53px per tab, too narrow for a long label.
+  tabLabel?: string;
   icon: LucideIcon;
 }
 
@@ -39,6 +41,7 @@ export function AdminNavItem({ link, active, tone }: AdminNavItemProps) {
     <Link
       href={link.href}
       aria-current={active ? "page" : undefined}
+      aria-label={link.tabLabel ? link.label : undefined}
       className="relative flex h-16 flex-col items-center justify-center gap-1 lg:h-10 lg:flex-row lg:justify-start lg:gap-3 lg:pl-6"
       data-testid={`nav-item-${link.id}`}
     >
@@ -87,7 +90,7 @@ export function AdminTabItem({ link, active, tone }: AdminNavItemProps) {
             : "type-caption text-surface-brand-light",
         )}
       >
-        {link.label}
+        {link.tabLabel ?? link.label}
       </span>
     </Link>
   );
