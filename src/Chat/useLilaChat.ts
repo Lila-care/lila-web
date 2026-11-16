@@ -58,6 +58,10 @@ export function useLilaChat(): UseLilaChatReturn {
   const [showLoginGate, setShowLoginGate] = useState(false);
   const [showUpgradeGate, setShowUpgradeGate] = useState(false);
   const [hasActiveTemplate, setHasActiveTemplate] = useState(true);
+  // Defaults to false (not "trust the client") — until the mount-time `agent/me` check
+  // resolves, an authenticated user is treated as a free user for gating purposes, same
+  // posture as `hasActiveTemplate`/`onboardingPending` above.
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [onboardingPending, setOnboardingPending] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
@@ -67,6 +71,7 @@ export function useLilaChat(): UseLilaChatReturn {
     const guestId = getGuestId();
     const agent = await getAgentMe(token, token ? undefined : guestId);
     setHasActiveTemplate(agent.hasActiveTemplate);
+    setHasActiveSubscription(agent.hasActiveSubscription);
     setOnboardingPending(agent.onboarding.pending);
     return agent;
   }, [token]);
@@ -220,12 +225,14 @@ export function useLilaChat(): UseLilaChatReturn {
         }
 
         if (token) {
-          // Increment user count after successful response
+          // Increment user count after successful response. The counter itself keeps running
+          // regardless of subscription (useful for telemetry), but an active subscriber must
+          // never see the upgrade nag — this gate has no other awareness of billing state.
           const newCount =
             parseInt(localStorage.getItem(USER_COUNT_KEY) ?? "0", 10) + 1;
           localStorage.setItem(USER_COUNT_KEY, String(newCount));
           setUserCount(newCount);
-          if (newCount >= upgradePromptLimit) {
+          if (newCount >= upgradePromptLimit && !hasActiveSubscription) {
             setShowUpgradeGate(true);
           }
         } else {
@@ -251,6 +258,7 @@ export function useLilaChat(): UseLilaChatReturn {
       freeQuestionLimit,
       upgradePromptLimit,
       onboardingPending,
+      hasActiveSubscription,
       refreshAgentMe,
     ],
   );
