@@ -685,7 +685,7 @@ test.describe("Admin Plans — navegación y responsive", () => {
       "aria-current",
       "page",
     );
-    await expect(tabBar.getByRole("link")).toHaveCount(6); // Dashboard, Usuarias, Reportes, Formularios, Planes, Contenido
+    await expect(tabBar.getByRole("link")).toHaveCount(7); // Dashboard, Usuarias, Reportes, Formularios, Planes, Notificaciones, Contenido
 
     // Crear plan pasa debajo de las tabs, a todo el ancho.
     await expect(page.getByTestId("plans-create-button")).toBeHidden();
