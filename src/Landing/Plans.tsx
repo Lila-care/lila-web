@@ -1,5 +1,5 @@
 import { cn } from "@lila-care/design-system";
-import { PLANS, type PlanCard } from "./landingContent";
+import { CTA_HREF, PLANS, type PlanCard } from "./landingContent";
 import { CheckItem, Eyebrow, OutlineCta, PrimaryCta, SectionContainer } from "./LandingPrimitives";
 
 function PlanCardView({ plan }: { plan: PlanCard }) {
@@ -49,7 +49,7 @@ function PlanCardView({ plan }: { plan: PlanCard }) {
         ))}
       </ul>
       {plan.id === "free" ? (
-        <OutlineCta href="/login" className="mt-auto sm:w-full">
+        <OutlineCta href={CTA_HREF} local={false} className="mt-auto sm:w-full">
           {plan.cta}
         </OutlineCta>
       ) : (

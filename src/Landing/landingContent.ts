@@ -15,8 +15,16 @@ export const PHASE_COLORS: Record<Phase, string> = {
 
 export const CHECK_ICON = checkIcon;
 
-/** Single place for the sign-in/entry route every CTA points to. */
-export const CTA_HREF = "/login";
+/** Every "Quiero probar Lila" CTA scrolls to the download section (KAN-166). */
+export const CTA_HREF = "#descargar";
+
+export { STORE_LINKS } from "./storeLinks";
+
+export const DOWNLOAD_COPY = {
+  title: "Descarga Lila",
+  subtitle: "Elige tu tienda y empieza a registrar tu ciclo hoy.",
+  note: "Registrar tu periodo, tus síntomas y tu diario siempre es gratis.",
+} as const;
 
 /** Required by product: the app is on both stores, never iOS-only. */
 export const AVAILABILITY_COPY = "Disponible para Android y iOS";
