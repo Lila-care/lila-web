@@ -38,6 +38,8 @@ Single `<Switch>`, three route families:
   Phone mockups are PNG exports from Figma with the background knocked out to transparent
   (`src/assets/landing/`). `index.css` has unlayered `a:hover{color}` and `a{font-weight:500}`:
   on anchors use `hover:text-*!` / `font-normal!` to win.
+- **Account deletion** (`src/DeleteAccount/`): `/eliminar-cuenta`, public page required by Google
+  Play; deletion is requested by email.
 - **Consumer app** (no auth guard in the router itself): `/hoy`, `/chat`, `/calendario`,
   `/aprende`, `/perfil`, `/perfil/privacidad`, `/login` (`UserLogin.tsx`), `/terms`.
 - **Admin** (`src/Admin/`), Cognito-gated: `/admin` (login), `/admin/change-password`,
