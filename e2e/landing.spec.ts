@@ -57,7 +57,7 @@ test.describe("Landing page at /", () => {
     await page.goto("/");
     const section = page.locator("#descargar");
     for (const [name, href] of [
-      ["Descarga Lila en el App Store", STORE_LINKS.appStore],
+      ["Probar Lila en iPhone con TestFlight", STORE_LINKS.testFlight],
       ["Descarga Lila en Google Play", STORE_LINKS.playStore],
     ] as const) {
       const link = section.getByRole("link", { name });
@@ -65,6 +65,20 @@ test.describe("Landing page at /", () => {
       await expect(link).toHaveAttribute("rel", /noopener/);
       await expect(link).toHaveAttribute("href", href);
     }
+  });
+
+  test("explains the TestFlight install under the store buttons", async ({ page }) => {
+    await page.goto("/");
+    const section = page.locator("#descargar");
+    await expect(section.getByRole("heading", { level: 3 })).toHaveText(
+      /¿Tienes iPhone\?\s*Así la instalas/,
+    );
+    await expect(section.getByRole("heading", { level: 4 })).toHaveText([
+      "Abre el link en tu iPhone",
+      "Instala TestFlight",
+      "Acepta e instala Lila",
+    ]);
+    await expect(section.getByText("Versión de prueba", { exact: true })).toBeVisible();
   });
 
   test("no landing link points to /login", async ({ page }) => {
@@ -92,14 +106,14 @@ test.describe("Landing page at /", () => {
     }));
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
 
-    const [appStore, playStore] = await Promise.all([
-      page.locator("#descargar").getByRole("link", { name: /App Store/ }).boundingBox(),
+    const [testFlight, playStore] = await Promise.all([
+      page.locator("#descargar").getByRole("link", { name: /TestFlight/ }).boundingBox(),
       page.locator("#descargar").getByRole("link", { name: /Google Play/ }).boundingBox(),
     ]);
-    expect(appStore && playStore).toBeTruthy();
-    expect(playStore!.y).toBeGreaterThan(appStore!.y + appStore!.height - 1);
-    expect(Math.abs(appStore!.width - playStore!.width)).toBeLessThan(1);
-    expect(appStore!.width).toBeGreaterThan(300);
+    expect(testFlight && playStore).toBeTruthy();
+    expect(playStore!.y).toBeGreaterThan(testFlight!.y + testFlight!.height - 1);
+    expect(Math.abs(testFlight!.width - playStore!.width)).toBeLessThan(1);
+    expect(testFlight!.width).toBeGreaterThan(300);
   });
 
   test("has no horizontal scroll at 768px and 1440px", async ({ page }) => {

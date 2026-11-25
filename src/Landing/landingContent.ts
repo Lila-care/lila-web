@@ -22,8 +22,32 @@ export { STORE_LINKS } from "./storeLinks";
 
 export const DOWNLOAD_COPY = {
   title: "Descarga Lila",
-  subtitle: "Elige tu tienda y empieza a registrar tu ciclo hoy.",
+  subtitle: "Elige tu teléfono y empieza a registrar tu ciclo hoy.",
   note: "Registrar tu periodo, tus síntomas y tu diario siempre es gratis.",
+} as const;
+
+/** Temporary (KAN-174): remove with `InstallIphoneCard` once Lila is on the App Store. */
+export const INSTALL_IPHONE_COPY = {
+  badge: "Versión de prueba",
+  titleStart: "¿Tienes iPhone?",
+  titleEnd: "Así la instalas",
+  intro:
+    "Mientras Lila llega al App Store, en iPhone se instala con TestFlight, la app oficial de Apple para probar apps.",
+  steps: [
+    {
+      title: "Abre el link en tu iPhone",
+      text: "Toca el botón de TestFlight. Te lleva a la invitación para probar Lila.",
+    },
+    {
+      title: "Instala TestFlight",
+      text: "Si no la tienes, descárgala gratis desde el App Store. Es la app oficial de Apple.",
+    },
+    {
+      title: "Acepta e instala Lila",
+      text: "Vuelve a abrir el link, toca «Aceptar» y luego «Instalar». Lila queda en tu pantalla de inicio.",
+    },
+  ],
+  note: "Al ser una versión de prueba, puede tener detalles por pulir. Las actualizaciones te llegan desde TestFlight y tu opinión nos ayuda a mejorarla.",
 } as const;
 
 /** Required by product: the app is on both stores, never iOS-only. */
