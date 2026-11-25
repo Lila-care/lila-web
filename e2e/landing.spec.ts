@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { STORE_LINKS } from "../src/Landing/storeLinks";
 
 test.describe("Landing page at /", () => {
   test("renders the landing instead of redirecting to /hoy", async ({ page }) => {
@@ -30,15 +31,62 @@ test.describe("Landing page at /", () => {
     await expect(page.getByRole("contentinfo")).toContainText("© 2026 Lila Care");
   });
 
-  test("CTAs lead to existing routes and make no API calls", async ({ page }) => {
+  test("CTAs scroll to #descargar without leaving / or calling the API", async ({ page }) => {
     const apiCalls: string[] = [];
     page.on("request", (req) => {
       if (/localhost:6100|\/admin\//.test(req.url())) apiCalls.push(req.url());
     });
     await page.goto("/");
-    await page.getByRole("link", { name: "Quiero probar Lila" }).first().click();
-    await expect(page).toHaveURL(/\/login$/);
+    const ctas = page.getByRole("link", { name: "Quiero probar Lila" });
+    await ctas.first().click();
+    await expect(page).toHaveURL(/\/(#descargar)?$/);
+    await expect(page.locator("#descargar")).toBeInViewport();
+    await expect(page.getByRole("heading", { name: "Descarga Lila" })).toBeInViewport();
+    expect(new URL(page.url()).pathname).toBe("/");
     expect(apiCalls).toEqual([]);
+  });
+
+  test("plan CTAs also point to #descargar", async ({ page }) => {
+    await page.goto("/");
+    for (const name of ["Empezar gratis", "Elegir Premium"]) {
+      await expect(page.getByRole("link", { name })).toHaveAttribute("href", "#descargar");
+    }
+  });
+
+  test("store buttons open the store links in a new tab", async ({ page }) => {
+    await page.goto("/");
+    const section = page.locator("#descargar");
+    for (const [name, href] of [
+      ["Probar Lila en iPhone con TestFlight", STORE_LINKS.testFlight],
+      ["Descarga Lila en Google Play", STORE_LINKS.playStore],
+    ] as const) {
+      const link = section.getByRole("link", { name });
+      await expect(link).toHaveAttribute("target", "_blank");
+      await expect(link).toHaveAttribute("rel", /noopener/);
+      await expect(link).toHaveAttribute("href", href);
+    }
+  });
+
+  test("explains the TestFlight install under the store buttons", async ({ page }) => {
+    await page.goto("/");
+    const section = page.locator("#descargar");
+    await expect(section.getByRole("heading", { level: 3 })).toHaveText(
+      /¿Tienes iPhone\?\s*Así la instalas/,
+    );
+    await expect(section.getByRole("heading", { level: 4 })).toHaveText([
+      "Abre el link en tu iPhone",
+      "Instala TestFlight",
+      "Acepta e instala Lila",
+    ]);
+    await expect(section.getByText("Versión de prueba", { exact: true })).toBeVisible();
+  });
+
+  test("no landing link points to /login", async ({ page }) => {
+    await page.goto("/");
+    const hrefs = await page.locator("a[href]").evaluateAll((els) =>
+      els.map((el) => el.getAttribute("href")),
+    );
+    expect(hrefs.filter((h) => h?.includes("/login"))).toEqual([]);
   });
 
   test("existing routes still resolve", async ({ page }) => {
@@ -57,6 +105,15 @@ test.describe("Landing page at /", () => {
       clientWidth: document.documentElement.clientWidth,
     }));
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+
+    const [testFlight, playStore] = await Promise.all([
+      page.locator("#descargar").getByRole("link", { name: /TestFlight/ }).boundingBox(),
+      page.locator("#descargar").getByRole("link", { name: /Google Play/ }).boundingBox(),
+    ]);
+    expect(testFlight && playStore).toBeTruthy();
+    expect(playStore!.y).toBeGreaterThan(testFlight!.y + testFlight!.height - 1);
+    expect(Math.abs(testFlight!.width - playStore!.width)).toBeLessThan(1);
+    expect(testFlight!.width).toBeGreaterThan(300);
   });
 
   test("has no horizontal scroll at 768px and 1440px", async ({ page }) => {

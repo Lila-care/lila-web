@@ -84,7 +84,7 @@ export function PrimaryCta({
         className,
       )}
     >
-      <Link href={href}>{children}</Link>
+      <a href={href}>{children}</a>
     </Button>
   );
 }

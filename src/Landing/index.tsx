@@ -5,6 +5,7 @@ import HowItWorks from "./HowItWorks";
 import Privacy from "./Privacy";
 import Plans from "./Plans";
 import Social from "./Social";
+import Download from "./Download";
 import LandingFooter from "./LandingFooter";
 
 /** Public marketing page at `/`: static content, no auth, no API calls. */
@@ -19,6 +20,7 @@ export default function LandingPage() {
         <Privacy />
         <Plans />
         <Social />
+        <Download />
       </main>
       <LandingFooter />
     </div>
