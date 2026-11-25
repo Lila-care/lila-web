@@ -2,6 +2,7 @@ import { Route, Switch } from "wouter";
 
 import "./App.css";
 import Terms from "./Terms";
+import DeleteAccountPage from "./DeleteAccount";
 import DashboardPage from "./Admin/DashboardPage";
 import UsersPage from "./Admin/UsersPage";
 import ReportsPage from "./Admin/ReportsPage";
@@ -30,6 +31,7 @@ const App = () => {
       <Switch>
         <Route path="/" component={LandingPage} />
         <Route path="/terms" component={Terms} />
+        <Route path="/eliminar-cuenta" component={DeleteAccountPage} />
         <Route
           path="/admin/dashboard"
           component={() => (
